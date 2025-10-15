@@ -1,0 +1,58 @@
+
+STATE PARAMS
+
+1. prompt
+2. goal
+3. modifications
+4. iterations number
+
+
+Node 1
+Prompt improver
+You are a prompt creator. You will receive a prompt, a goal and maybe modificaitons and 
+your goal is to improve the current prompt by returning a new prompt improved that satisfies the goal better.
+Follow the modifications to improve the prompt.
+
+<Prompt>
+{prompt}
+</Prompt>
+
+<Modifications>
+{modifications}
+</Modifications>
+
+<Goal>
+{goal}
+<Goal>
+
+
+
+
+Node1
+1. Calls prompt and expects a result
+
+2. TEst the result with this prompt below
+
+Tester:
+Your are a prompt evaluator. Here there is a prompt and it's result. 
+Your objective is to evaluate if the task has been properly done and how could it be improved (if it's not correct).
+YOu can determine if the task has been properly done by the Goal, the goal defines what do we want to achieve with this prompt.
+
+<Prompt>
+{prompt}
+</Prompt>
+
+
+<Result>
+{result}
+</Result>
+
+<Goal>
+{goal}
+<Goal>
+
+You will return in Json form two variables
+1. correct: boolean
+2. modification: str (Empty if correct is true)
+
+
