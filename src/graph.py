@@ -2,9 +2,9 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
+from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
 load_dotenv()
@@ -136,10 +136,12 @@ graph_builder.add_node("prompt_tester", prompt_tester)
 graph_builder.add_edge(START, "improve_prompt")
 
 
-def get_langfuse_handler():
-    from langfuse.langchain import CallbackHandler
+# def get_langfuse_handler():
+#     from langfuse.langchain import CallbackHandler
 
-    return CallbackHandler()
+#     return CallbackHandler()
 
 
-graph = graph_builder.compile().with_config({"callbacks": [get_langfuse_handler()]})
+# graph = graph_builder.compile().with_config({"callbacks": [get_langfuse_handler()]})
+
+graph = graph_builder.compile()
