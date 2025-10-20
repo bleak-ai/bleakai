@@ -15,33 +15,28 @@ export const InterruptUI = () => {
   const interrupt = useLangGraphInterruptState();
   const sendCommand = useLangGraphSendCommand();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
 
-  if (!interrupt) return null;
+  if (submitted) {
+    return null;
+  }
 
-  /*************  ✨ Windsurf Command ⭐  *************/
-  /**
-   * Sends a command to LangGraph to resume the graph with the user's answer.
-   * The answer is a JSON object with the question and answer.
-   */
-  /*******  b4458e7f-2f34-489a-82e2-dcdf6c1ce985  *******/ const respondYes =
-    () => {
-      const formattedAnswers: Answer[] = interrupt.value.questions.map(
-        (question: any) => ({
-          question: question.question,
-          answer: answers[question.id] || ""
-        })
-      );
-      sendCommand({resume: JSON.stringify(formattedAnswers)});
-    };
-  const respondNo = () => {
-    sendCommand({resume: "no"});
-  };
-
-  const questions: QuestionType[] = interrupt.value.questions;
+  const questions: QuestionType[] = interrupt?.value.questions ?? [];
   const questionsWithoutOther = questions.map((question) => ({
     ...question,
     options: question.options?.filter((option) => option !== "Other")
   }));
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+    const formattedAnswers: Answer[] = questionsWithoutOther.map(
+      (question: QuestionType, index) => ({
+        question: question.question,
+        answer: answers[index] || ""
+      })
+    );
+    sendCommand({resume: JSON.stringify(formattedAnswers)});
+  };
 
   const handleAnswersChange = (newAnswers: Record<string, string>) => {
     setAnswers(newAnswers);
@@ -57,9 +52,8 @@ export const InterruptUI = () => {
             answers={answers}
           />
         </div>
-        <div className="flex  gap-2 w-full mt-6">
-          <Button onClick={respondYes}>Submit</Button>
-          {/* <Button onClick={respondNo}>Reject</Button> */}
+        <div className="flex gap-2 w-full mt-6">
+          <Button onClick={handleSubmit}>Submit</Button>
         </div>
       </div>
     </div>

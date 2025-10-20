@@ -1,7 +1,9 @@
+import json
 from typing import List, Literal
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import MessagesState
 from langgraph.types import Command, interrupt
@@ -39,7 +41,8 @@ class GraphState(InputGraphState):
     answers: List[Answer]
 
 
-llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
+# llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
+llm = init_chat_model("ollama:gemma3:4b")
 
 
 async def clarify_prompt(state: GraphState) -> Command[Literal["human_clarify_prompt"]]:
@@ -86,7 +89,25 @@ async def human_clarify_prompt(state: GraphState) -> Command[Literal["answer"]]:
 
     answers = interrupt({"questions": questions})
 
-    return Command(goto="answer", update={"answers": answers})
+    print("answers", answers)
+    json_answers = json.loads(answers)
+
+    formatted_answers = (
+        "**START Questions & Answers:** \n\n"
+        + "\n\n".join(
+            [
+                f"**Question:** {answer['question']}. **Answer:** {answer['answer']}"
+                for answer in json_answers
+            ]
+        )
+        + "\n\n**END Questions & Answers:**"
+    )
+
+    answers_ai_message = AIMessage(content=formatted_answers)
+
+    return Command(
+        goto="answer", update={"answers": answers, "messages": answers_ai_message}
+    )
 
 
 async def answer(state: GraphState) -> Command[Literal["__end__"]]:
@@ -107,7 +128,12 @@ async def answer(state: GraphState) -> Command[Literal["__end__"]]:
 
     response = llm.invoke(prompt)
 
-    return Command(goto=END, update={"messages": response.content})
+    # Add clear separation between Q&A and AI response
+    separator = "\n" + "=" * 50 + "\n"
+    ai_response_content = f"{separator}\n🤖 **AI Response:**\n\n{response.content}"
+    ai_response = AIMessage(content=ai_response_content)
+
+    return Command(goto=END)
 
 
 graph_builder = StateGraph(GraphState)

@@ -4,7 +4,7 @@ dev:
 	@source .venv/bin/activate && uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.12 langgraph dev --allow-blocking & cd frontend && npm run dev & wait
 
 # Start frontend only
-frontend:
+frontend-dev:
 	@echo "Starting frontend on http://localhost:5173"
 	@cd frontend && npm run dev
 
