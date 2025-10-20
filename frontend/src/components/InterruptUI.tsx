@@ -3,7 +3,7 @@ import {
   useLangGraphSendCommand
 } from "@assistant-ui/react-langgraph";
 import {useState} from "react";
-import Questions from "./Questions";
+import Questions, {type QuestionType} from "./Questions";
 import {Button} from "./ui/button";
 
 interface Answer {
@@ -37,7 +37,11 @@ export const InterruptUI = () => {
     sendCommand({resume: "no"});
   };
 
-  const questions = interrupt.value.questions;
+  const questions: QuestionType[] = interrupt.value.questions;
+  const questionsWithoutOther = questions.map(question => ({
+    ...question,
+    options: question.options?.filter(option => option !== "Other")
+  }));
 
   const handleAnswersChange = (newAnswers: Record<string, string>) => {
     setAnswers(newAnswers);
@@ -49,7 +53,7 @@ export const InterruptUI = () => {
         <div>Interrupt: </div>
         <div>
           <Questions
-            questions={questions}
+            questions={questionsWithoutOther}
             onAnswersChange={handleAnswersChange}
             answers={answers}
           />
