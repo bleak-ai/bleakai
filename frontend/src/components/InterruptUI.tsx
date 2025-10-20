@@ -38,9 +38,9 @@ export const InterruptUI = () => {
   };
 
   const questions: QuestionType[] = interrupt.value.questions;
-  const questionsWithoutOther = questions.map(question => ({
+  const questionsWithoutOther = questions.map((question) => ({
     ...question,
-    options: question.options?.filter(option => option !== "Other")
+    options: question.options?.filter((option) => option !== "Other")
   }));
 
   const handleAnswersChange = (newAnswers: Record<string, string>) => {
@@ -50,7 +50,6 @@ export const InterruptUI = () => {
   return (
     <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1 last:mb-24">
       <div className="flex flex-col gap-2">
-        <div>Interrupt: </div>
         <div>
           <Questions
             questions={questionsWithoutOther}
@@ -58,10 +57,8 @@ export const InterruptUI = () => {
             answers={answers}
           />
         </div>
-        <div className="flex justify-center gap-2 w-full">
-          <Button onClick={respondYes} className="w-1/2">
-            Submit
-          </Button>
+        <div className="flex  gap-2 w-full mt-6">
+          <Button onClick={respondYes}>Submit</Button>
           {/* <Button onClick={respondNo}>Reject</Button> */}
         </div>
       </div>
