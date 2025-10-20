@@ -7,11 +7,6 @@ import {useState} from "react";
 import Questions, {type QuestionType} from "./Questions";
 import {Button} from "./ui/button";
 
-interface Question {
-  id: string;
-  question: string;
-}
-
 interface Answer {
   question: string;
   answer: string;
@@ -26,30 +21,31 @@ export const QuestionsOutput: ToolCallMessagePartComponent = ({
   const sendCommand = useLangGraphSendCommand();
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  if (!interrupt) {
-    return (
-      <div>
-        {toolName}, {argsText}
-        {result}
-      </div>
-    );
-  }
+  console.log("tool name", toolName);
+  // if (!interrupt) {
+  //   return (
+  //     <div>
+  //       {toolName}, {argsText}
+  //       {result}
+  //     </div>
+  //   );
+  // }
 
-  const respondYes = () => {
-    const formattedAnswers: Answer[] = interrupt.value.questions.map(
-      (question: Question) => ({
-        question: question.question,
-        answer: answers[question.id] || ""
-      })
-    );
-    sendCommand({resume: JSON.stringify(formattedAnswers)});
-  };
-
-  const questions: QuestionType[] = interrupt.value.questions;
+  const questions: QuestionType[] = interrupt?.value.questions ?? [];
   const questionsWithoutOther = questions.map((question) => ({
     ...question,
     options: question.options?.filter((option) => option !== "Other")
   }));
+
+  const handleSubmit = () => {
+    const formattedAnswers: Answer[] = questionsWithoutOther.map(
+      (question: QuestionType, index) => ({
+        question: question.question,
+        answer: answers[index] || ""
+      })
+    );
+    sendCommand({resume: JSON.stringify(formattedAnswers)});
+  };
 
   const handleAnswersChange = (newAnswers: Record<string, string>) => {
     setAnswers(newAnswers);
@@ -66,7 +62,7 @@ export const QuestionsOutput: ToolCallMessagePartComponent = ({
           />
         </div>
         <div className="flex gap-2 w-full mt-6">
-          <Button onClick={respondYes}>Submit</Button>
+          <Button onClick={handleSubmit}>Submit</Button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ from typing import List, Literal
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import MessagesState
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
@@ -15,6 +15,11 @@ class Question(BaseModel):
 
     question: str
     options: List[str]  # Only for radio questions
+
+
+class Answer(BaseModel):
+    question: str
+    answer: str
 
 
 class QuestionsOutput(BaseModel):
@@ -31,6 +36,7 @@ class GraphState(InputGraphState):
     output_format: str
     role: str
     questions: List[Question]
+    answers: List[Answer]
 
 
 llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
@@ -69,7 +75,7 @@ async def clarify_prompt(state: GraphState) -> Command[Literal["human_clarify_pr
     )
 
 
-async def human_clarify_prompt(state: GraphState) -> Command[Literal["__end__"]]:
+async def human_clarify_prompt(state: GraphState) -> Command[Literal["answer"]]:
     """"""
     # messages = state.get("messages", [])
     # questions = messages[-1]
@@ -80,7 +86,28 @@ async def human_clarify_prompt(state: GraphState) -> Command[Literal["__end__"]]
 
     answers = interrupt({"questions": questions})
 
-    return Command(goto="clarify_prompt")
+    return Command(goto="answer", update={"answers": answers})
+
+
+async def answer(state: GraphState) -> Command[Literal["__end__"]]:
+    """"""
+
+    answers = state.get("answers", [])
+    messages = state.get("messages", [])
+
+    prompt = f"""   
+    Answer the following question of the user based on the message and answers
+    
+    The message is:
+    {messages}
+    
+    Questions and answers: 
+    {answers}
+    """
+
+    response = llm.invoke(prompt)
+
+    return Command(goto=END, update={"messages": response.content})
 
 
 graph_builder = StateGraph(GraphState)
@@ -88,6 +115,7 @@ graph_builder = StateGraph(GraphState)
 
 graph_builder.add_node("clarify_prompt", clarify_prompt)
 graph_builder.add_node("human_clarify_prompt", human_clarify_prompt)
+graph_builder.add_node("answer", answer)
 
 graph_builder.add_edge(START, "clarify_prompt")
 
