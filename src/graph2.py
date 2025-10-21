@@ -100,7 +100,7 @@ async def human_clarify_prompt(state: GraphState) -> Command[Literal["answer"]]:
                 for answer in json_answers
             ]
         )
-        + "\n\n**END Questions & Answers:**"
+        + "\n\n**END Questions & Answers**\n\n"
     )
 
     answers_ai_message = AIMessage(content=formatted_answers)
