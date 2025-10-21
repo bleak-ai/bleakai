@@ -21,7 +21,6 @@ export default function Questions({
   answers
 }: QuestionsProps) {
   const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
-  console.log("Answers:", answers);
   const handleInputChange = (questionIndex: number, value: string) => {
     const newAnswers = {...answers, [questionIndex]: value};
     onAnswersChange?.(newAnswers);

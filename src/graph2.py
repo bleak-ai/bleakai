@@ -96,7 +96,7 @@ async def human_clarify_prompt(state: GraphState) -> Command[Literal["answer"]]:
         "**START Questions & Answers:** \n\n"
         + "\n\n".join(
             [
-                f"**Question:** {answer['question']}. **Answer:** {answer['answer']}"
+                f"**Question:** {answer['question']}. \n**Answer:** {answer['answer']}"
                 for answer in json_answers
             ]
         )
