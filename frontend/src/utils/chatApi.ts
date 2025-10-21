@@ -1,4 +1,7 @@
-import {type LangChainMessage} from "@assistant-ui/react-langgraph";
+import {
+  type LangChainMessage,
+  type LangGraphSendMessageConfig
+} from "@assistant-ui/react-langgraph";
 import {Client, type ThreadState} from "@langchain/langgraph-sdk";
 
 const createClient = () => {
@@ -25,7 +28,7 @@ export const getThreadState = async (
 export const sendMessage = async (params: {
   threadId: string;
   messages?: LangChainMessage[];
-  config?: any;
+  config?: LangGraphSendMessageConfig;
 }) => {
   const client = createClient();
   const config = params.config ?? {};
