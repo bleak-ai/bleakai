@@ -90,7 +90,7 @@ async def clarify_prompt(state: GraphState) -> Command[Literal["ask_questions"]]
         {{"id": "q1", "question": "question1", "options":["option1", "option2", "option3"]}},
     ]
 
-    MAX 2 QUESTIONS, NO MORE
+    3 or 4 QUESTIONS, NO MORE
 
     Never include Other in the options.
 
