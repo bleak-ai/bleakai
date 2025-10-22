@@ -30,7 +30,7 @@ class QuestionsOutput(BaseModel):
 
 class GraphState(TypedDict):
     messages: Annotated[list[MessageLikeRepresentation], operator.add]
-    answers: List[Answer]
+    questions_made: bool
 
 
 @tool(description="Tool to ask questions to the user.")
@@ -46,10 +46,17 @@ llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
 # llm = init_chat_model("ollama:llama3.2:latest")
 
 
-async def clarify_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
+async def clarify_prompt(
+    state: GraphState,
+) -> Command[Literal["tool_supervisor", "answer"]]:
     """"""
     print("clarify state")
     messages = state.get("messages", [])
+    questions_made = state.get("questions_made", False)
+
+    if questions_made:
+        return Command(goto="answer")
+
     prompt = f"""
     Your goal is to call the tool ask_questions_tool with the right paramters.
 
@@ -90,7 +97,9 @@ async def tool_supervisor(state: GraphState) -> Command[Literal["answer"]]:
 
         answers = ask_questions_tool.invoke(tool_args)
 
-    return Command(goto="answer", update={"messages": [answers]})
+    return Command(
+        goto="answer", update={"messages": [answers], "questions_made": True}
+    )
 
 
 async def answer(state: GraphState) -> Command[Literal["__end__"]]:
