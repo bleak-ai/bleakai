@@ -1,7 +1,6 @@
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group";
-import {useState} from "react";
 
 export type QuestionType = {
   question: string;
@@ -20,17 +19,9 @@ export default function Questions({
   onAnswersChange,
   answers
 }: QuestionsProps) {
-  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
   const handleInputChange = (questionIndex: number, value: string) => {
     const newAnswers = {...answers, [questionIndex]: value};
     onAnswersChange?.(newAnswers);
-  };
-
-  const handleCustomInputChange = (questionIndex: number, value: string) => {
-    const newCustomInputs = {...customInputs, [questionIndex]: value};
-    setCustomInputs(newCustomInputs);
-    // Always update the answer with the actual text value
-    handleInputChange(questionIndex, value);
   };
 
   const renderQuestion = (question: QuestionType, questionIndex: number) => {
@@ -83,13 +74,9 @@ export default function Questions({
                   <Input
                     id={`${questionIndex}-other-input`}
                     placeholder="Please specify..."
-                    value={
-                      isCustomAnswer
-                        ? answers[questionIndex]
-                        : customInputs[questionIndex] || ""
-                    }
+                    value={isCustomAnswer ? answers[questionIndex] : ""}
                     onChange={(e) =>
-                      handleCustomInputChange(questionIndex, e.target.value)
+                      handleInputChange(questionIndex, e.target.value)
                     }
                     className="w-full"
                     autoFocus

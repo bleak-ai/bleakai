@@ -31,7 +31,7 @@ import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils";
 import {LazyMotion, MotionConfig, domAnimation} from "motion/react";
 import * as m from "motion/react-m";
-import {InterruptUI} from "../InterruptUI";
+import {AskQuestionTool} from "../tools/AskQuestionTool";
 
 export const Thread: FC = () => {
   return (
@@ -54,7 +54,7 @@ export const Thread: FC = () => {
               }}
             />
 
-            <InterruptUI />
+            {/* <InterruptUI /> */}
 
             <ThreadPrimitive.If empty={false}>
               <div className="aui-thread-viewport-spacer min-h-8 grow" />
@@ -251,7 +251,10 @@ const AssistantMessage: FC = () => {
             components={{
               Text: MarkdownText,
               tools: {
-                Fallback: ToolFallback
+                Fallback: ToolFallback,
+                by_name: {
+                  ask_questions_tool: AskQuestionTool
+                }
               }
             }}
           />
