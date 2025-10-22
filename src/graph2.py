@@ -3,7 +3,7 @@ from typing import Annotated, List, Literal, TypedDict
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import AIMessage, MessageLikeRepresentation
+from langchain_core.messages import MessageLikeRepresentation
 from langchain_core.tools import tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
@@ -39,27 +39,14 @@ def ask_questions_tool(questions: List[Question]) -> Command[Literal["answer"]]:
 
     answers = interrupt({"questions": questions})
 
-    # json_answers = json.loads(answers)
-
-    # formatted_answers = "/n".join(
-    #     [
-    #         f"**Question:** {answer['question']}. \n**Answer:** {answer['answer']}"
-    #         for answer in json_answers
-    #     ]
-    # )
-
-    answers_ai_message = AIMessage(content=answers)
-
-    return Command(
-        goto="answers", update={"answers": answers, "messages": answers_ai_message}
-    )
+    return answers
 
 
 llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
 # llm = init_chat_model("ollama:llama3.2:latest")
 
 
-async def clarify_prompt(state: GraphState) -> Command[Literal["ask_questions"]]:
+async def clarify_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
     """"""
     print("clarify state")
     messages = state.get("messages", [])
@@ -90,10 +77,10 @@ async def clarify_prompt(state: GraphState) -> Command[Literal["ask_questions"]]
     # llm_with_structured = llm.with_structured_output(QuestionsOutput)
     response = llm_with_tools.invoke([("human", prompt)])
 
-    return Command(goto="ask_questions", update={"messages": [response]})
+    return Command(goto="tool_supervisor", update={"messages": [response]})
 
 
-async def ask_questions(state: GraphState) -> Command[Literal["answer"]]:
+async def tool_supervisor(state: GraphState) -> Command[Literal["answer"]]:
     """Process the tool calls from clarify_prompt and invoke the ask_questions_tool."""
     messages = state.get("messages", "")
     last_message = messages[-1]
@@ -127,7 +114,7 @@ graph_builder = StateGraph(GraphState)
 
 
 graph_builder.add_node("clarify_prompt", clarify_prompt)
-graph_builder.add_node("ask_questions", ask_questions)
+graph_builder.add_node("tool_supervisor", tool_supervisor)
 graph_builder.add_node("answer", answer)
 
 graph_builder.add_edge(START, "clarify_prompt")
