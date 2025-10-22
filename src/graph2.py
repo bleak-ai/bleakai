@@ -141,12 +141,7 @@ async def answer(state: GraphState) -> Command[Literal["__end__"]]:
     {answers}
     """
 
-    response = llm.invoke(prompt)
-
-    # Add clear separation between Q&A and AI response
-    separator = "\n" + "=" * 50 + "\n"
-    ai_response_content = f"{separator}\n🤖 **AI Response:**\n\n{response.content}"
-    ai_response = AIMessage(content=ai_response_content)
+    llm.invoke(prompt)
 
     return Command(goto=END)
 
