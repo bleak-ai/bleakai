@@ -1,12 +1,11 @@
-import json
-from typing import List, Literal
+import operator
+from typing import Annotated, List, Literal, TypedDict
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, MessageLikeRepresentation
 from langchain_core.tools import tool
 from langgraph.graph import END, START, StateGraph
-from langgraph.graph.message import MessagesState
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
 
@@ -29,17 +28,8 @@ class QuestionsOutput(BaseModel):
     questions: List[Question]
 
 
-class InputGraphState(MessagesState):
-    """_"""
-
-
-class GraphState(InputGraphState):
-    goal: str
-    context: str
-    output_format: str
-    role: str
-    questions: List[Question]
-    questions_response: str
+class GraphState(TypedDict):
+    messages: Annotated[list[MessageLikeRepresentation], operator.add]
     answers: List[Answer]
 
 
@@ -49,20 +39,16 @@ def ask_questions_tool(questions: List[Question]) -> Command[Literal["answer"]]:
 
     answers = interrupt({"questions": questions})
 
-    json_answers = json.loads(answers)
+    # json_answers = json.loads(answers)
 
-    formatted_answers = (
-        "**START Questions & Answers:** \n\n"
-        + "\n\n".join(
-            [
-                f"**Question:** {answer['question']}. \n**Answer:** {answer['answer']}"
-                for answer in json_answers
-            ]
-        )
-        + "\n\n**END Questions & Answers**\n\n"
-    )
+    # formatted_answers = "/n".join(
+    #     [
+    #         f"**Question:** {answer['question']}. \n**Answer:** {answer['answer']}"
+    #         for answer in json_answers
+    #     ]
+    # )
 
-    answers_ai_message = AIMessage(content=formatted_answers)
+    answers_ai_message = AIMessage(content=answers)
 
     return Command(
         goto="answers", update={"answers": answers, "messages": answers_ai_message}
@@ -104,46 +90,37 @@ async def clarify_prompt(state: GraphState) -> Command[Literal["ask_questions"]]
     # llm_with_structured = llm.with_structured_output(QuestionsOutput)
     response = llm_with_tools.invoke([("human", prompt)])
 
-    print("Questions:")
-    print(response)
-
-    return Command(goto="ask_questions", update={"questions_response": response})
+    return Command(goto="ask_questions", update={"messages": [response]})
 
 
 async def ask_questions(state: GraphState) -> Command[Literal["answer"]]:
     """Process the tool calls from clarify_prompt and invoke the ask_questions_tool."""
-    questions_response = state.get("questions_response", [])
+    messages = state.get("messages", "")
+    last_message = messages[-1]
 
-    print("Tool calls:")
-    for tool_call in questions_response.tool_calls:
+    for tool_call in last_message.tool_calls:
         tool_args = tool_call["args"]
-        print("toolargs", tool_args)
 
         answers = ask_questions_tool.invoke(tool_args)
-        print(answers)
 
-    return Command(goto="answer", update={"answers": answers})
+    return Command(goto="answer", update={"messages": [answers]})
 
 
 async def answer(state: GraphState) -> Command[Literal["__end__"]]:
     """"""
 
-    answers = state.get("answers", [])
     messages = state.get("messages", [])
 
     prompt = f"""   
     Answer the following question of the user based on the message and answers
     
-    The message is:
+    The messages are:
     {messages}
-    
-    Questions and answers: 
-    {answers}
     """
 
-    llm.invoke(prompt)
+    res = llm.invoke(prompt)
 
-    return Command(goto=END)
+    return Command(goto=END, update={"messages": [res.content]})
 
 
 graph_builder = StateGraph(GraphState)

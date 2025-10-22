@@ -5,7 +5,7 @@ import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 
 type Answer = {
-  question: string;
+  // question: string;
   answer: string;
 };
 
@@ -28,8 +28,8 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
     setSubmitted(true);
     const formattedAnswers: Answer[] = questionsWithoutOther.map(
       (question: QuestionType, index) => ({
-        question: question.question,
-        answer: answers[index] || ""
+        // question: question.question,
+        answer: `Question ${index}. Answer: ${answers[index]}`
       })
     );
     sendCommand({resume: JSON.stringify(formattedAnswers)});
