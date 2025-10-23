@@ -1,15 +1,11 @@
 "use client";
 
-import { ComponentPropsWithRef, forwardRef } from "react";
-import { Slottable } from "@radix-ui/react-slot";
+import {Slottable} from "@radix-ui/react-slot";
+import {type ComponentPropsWithRef, forwardRef} from "react";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {Button} from "@/components/ui/button";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import {cn} from "@/lib/utils";
 
 export type TooltipIconButtonProps = ComponentPropsWithRef<typeof Button> & {
   tooltip: string;
@@ -19,7 +15,7 @@ export type TooltipIconButtonProps = ComponentPropsWithRef<typeof Button> & {
 export const TooltipIconButton = forwardRef<
   HTMLButtonElement,
   TooltipIconButtonProps
->(({ children, tooltip, side = "bottom", className, ...rest }, ref) => {
+>(({children, tooltip, side = "bottom", className, ...rest}, ref) => {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

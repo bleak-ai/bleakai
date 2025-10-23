@@ -27,7 +27,7 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   const handleSubmit = () => {
     setSubmitted(true);
     const formattedAnswers: Answer[] = questionsWithoutOther.map(
-      (question: QuestionType, index) => ({
+      (_: QuestionType, index) => ({
         // question: question.question,
         answer: `Question ${index}. Answer: ${answers[index]}`
       })
