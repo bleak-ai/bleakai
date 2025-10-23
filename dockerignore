@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+frontend
+
+# Python virtual environment and cache
+.venv
+__pycache__
+*.pyc
+
+# IDE and tooling caches
+.vscode
+.idea
+.pytest_cache
+.ruff_cache
+
+# Secrets - IMPORTANT!
+.env
