@@ -23,4 +23,4 @@ EXPOSE 8000
 
 # Step 8: Define the command to run your app
 # The command remains the same, as `uvx` is now correctly on the PATH.
-CMD ["uvx", "--from", "langgraph-cli[inmem]", "--with-editable", ".", "langgraph", "dev", "--host", "0.0.0.0", "--port", "8000", "--allow-blocking"]
+CMD ["uvx", "--from", "langgraph-cli[inmem]", "--with-editable", ".", "langgraph", "dev", "--host", "0.0.0.0", "--port", "8012", "--allow-blocking"]
