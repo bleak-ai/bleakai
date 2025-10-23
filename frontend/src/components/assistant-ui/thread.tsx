@@ -102,8 +102,18 @@ const ThreadWelcome: FC = () => {
               transition={{delay: 0.1}}
               className="aui-thread-welcome-message-motion-2 text-2xl text-muted-foreground/65"
             >
-              How can I help you today?
+              This is a bleakai demo. A way to help users create better prompts.
+              <br />
             </m.div>
+            <m.span
+              initial={{opacity: 0, y: 10}}
+              animate={{opacity: 1, y: 0}}
+              exit={{opacity: 0, y: 10}}
+              transition={{delay: 0.1}}
+              className="aui-thread-welcome-message-motion-2 text-base text-muted-foreground/65"
+            >
+              Follow x.com/bsampera97 to keep up
+            </m.span>
           </div>
         </div>
       </div>
