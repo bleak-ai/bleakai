@@ -1,13 +1,21 @@
+import {Route, Routes} from "react-router-dom";
 import "./App.css";
 import Chat from "./components/Chat";
+import Home from "./components/home/Home";
 import {ThreadProvider} from "./contexts/ThreadContext";
 
 function App() {
   return (
     <ThreadProvider>
-      <div className="h-dvh">
-        <Chat />
-      </div>
+      {/* <Header /> */}
+      <main className="min-h-screen h-dvh px-2 md:px-4">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/chat" element={<Chat />} />
+        </Routes>
+      </main>
+
+      {/* <Footer /> */}
     </ThreadProvider>
   );
 }
