@@ -12,7 +12,7 @@ export default function Home() {
           <div className="mb-16">
             <div className="flex items-center justify-center">
               <h1 className="text-7xl sm:text-8xl md:text-9xl font-light tracking-tight mb-4 text-foreground">
-                Bleak
+                Bleak AI
               </h1>
             </div>
           </div>
@@ -104,7 +104,8 @@ export default function Home() {
               See BleakAI in Action
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Watch how BleakAI transforms natural conversation into structured, interactive elements
+              Watch how BleakAI transforms natural conversation into structured,
+              interactive elements
             </p>
           </div>
           <div className="flex items-center justify-center">
