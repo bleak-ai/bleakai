@@ -13,15 +13,6 @@ export default function Home() {
               <h1 className="text-7xl sm:text-8xl md:text-9xl font-light tracking-tight mb-4 text-foreground">
                 Bleak
               </h1>
-              <div className="ml-8 duration-700 ease-out">
-                <div className="w-20 h-20 sm:w-32 sm:h-32">
-                  <img
-                    src="/bleaktreewhite.png"
-                    alt=""
-                    className="w-full h-full"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
