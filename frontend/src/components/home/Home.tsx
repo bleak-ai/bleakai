@@ -1,3 +1,4 @@
+import bleakaidemo from "@/assets/bleakaidemo.mp4";
 import {ArrowRight} from "lucide-react";
 import {Button} from "../ui/button";
 
@@ -88,11 +89,33 @@ export default function Home() {
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Perfect data, no parsing needed.
-                  </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Demo Video Section */}
+      <section className="py-24 px-4 lg:px-16">
+        <div className="container-max">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-foreground mb-4">
+              See BleakAI in Action
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Watch how BleakAI transforms natural conversation into structured, interactive elements
+            </p>
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="w-full max-w-5xl aspect-video">
+              <video
+                className="w-full h-full object-cover rounded-lg shadow-lg border border-border"
+                controls
+              >
+                <source src={bleakaidemo} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </div>
           </div>
         </div>
