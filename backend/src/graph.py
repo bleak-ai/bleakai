@@ -1,7 +1,5 @@
-import json
-import operator
 import os
-from typing import Annotated, Any, List, Literal, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
@@ -11,37 +9,26 @@ from langchain_core.messages import (
     MessageLikeRepresentation,
     ToolCall,
 )
-from langchain_core.tools import tool
 from langgraph.graph import END, START, StateGraph
-from langgraph.types import Command, interrupt
-from pydantic import BaseModel
+from langgraph.types import Command
 
-from utils import format_questions_with_answers, get_formatted_messages
+from prompts import (
+    get_apply_improvements_prompt,
+    get_clarify_prompt,
+    get_create_prompt,
+    get_suggest_improvements_prompt,
+)
+from utils import (
+    ask_questions_tool,
+    create_prompt_tool,
+    format_questions_with_answers,
+    get_formatted_messages,
+    override_reducer,
+    suggest_improvements_tool,
+    test_prompt_tool,
+)
 
 load_dotenv()
-
-
-class Question(BaseModel):
-    """Represents a question to be asked to the user."""
-
-    question: str
-    options: List[str]  # Only for radio questions
-
-
-def override_reducer(current_value, new_value):
-    """Reducer function that allows a new value to completely replace the old one."""
-    if isinstance(new_value, dict) and new_value.get("type") == "override":
-        return new_value.get("value", new_value)
-    if isinstance(new_value, dict) and new_value.get("type") == "override_last":
-        override_value = new_value.get("value", new_value)
-        # If current_value is a list, replace only the last element
-        if isinstance(current_value, list) and current_value:
-            current_list_trimmed = current_value[:-1]
-            list_with_new_value = current_list_trimmed + override_value
-            return list_with_new_value
-        # If current_value is not a list or is empty, return the override_value as a single-element list
-        return [override_value]
-    return operator.add(current_value, new_value)
 
 
 class GraphState(TypedDict):
@@ -52,36 +39,6 @@ class GraphState(TypedDict):
 
 llm_model = os.environ["LLM_MODEL"]
 llm = init_chat_model(llm_model)
-
-
-@tool(description="Tool to ask questions to the user.")
-def ask_questions_tool(questions: List[Question]) -> Any:
-    """"""
-
-    answers = interrupt({"questions": questions})
-
-    return json.loads(answers)
-
-
-@tool(description="Tool to create a prompt.")
-def create_prompt_tool(prompt: str) -> Any:
-    next_step = interrupt({"prompt": prompt})
-
-    return next_step
-
-
-@tool(description="Tool to test a prompt.")
-def test_prompt_tool(result: str) -> Any:
-    next_step = interrupt({"result": result})
-
-    return next_step
-
-
-@tool(description="Tool to suggest improvements.")
-def suggest_improvements_tool(improvements: list[str]) -> Any:
-    improvements = interrupt({"improvements": improvements})
-
-    return json.loads(improvements)
 
 
 async def clarify_prompt(
@@ -107,30 +64,7 @@ async def clarify_prompt(
     print(formatted_messages)
     print("##############################")
 
-    prompt = f"""
-    Your goal is to call the tool ask_questions_tool with the right parameters.
-
-    Based on the user message, please do questions to the user that help you define the goal, context, output_format and role.
-
-    Call the tool with the questions as an array of JSON objects.
-    questions: [
-        {{"id": "q1", "question": "question1", "options":["option1", "option2", "option3"]}},
-
-    <CONVERSATION HISTORY>
-    {formatted_messages}
-    </CONVERSATION HISTORY>
-
-    1 question, NO MORE
-
-    Never include Other in the options.
-
-    IMPORTANT: The following questions have ALREADY been asked. DO NOT repeat them:
-    {chr(10).join(f"- {q}" for q in asked_questions) if asked_questions else "No questions asked yet"}
-
-    Generate a COMPLETELY DIFFERENT question that explores a new aspect of the user's needs.
-
-    DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new options
-  """
+    prompt = get_clarify_prompt(formatted_messages, asked_questions)
     tools = [ask_questions_tool]
 
     llm_with_tools = llm.bind_tools(tools)
@@ -259,21 +193,7 @@ async def suggest_improvements(
     print(formatted_messages)
     print("##############################")
 
-    prompt = f"""
-        You're objective is to call the tool create_prompt_tool with the correct parameter. New_prompt.
-        
-        These are the instructions that the users has provided to generate a prompt. 
-        <Instructions>
-        {messages}
-        </Instructions>
-        
-        This has been the result of this prompt
-        <result>
-        {result}
-        </result>
-        
-        Analyze how the prompt could be improved based on the instructions and generate improvements to improve it following the questions by the user.
-    """
+    prompt = get_suggest_improvements_prompt(messages, result)
 
     tools = [suggest_improvements_tool]
 
@@ -318,22 +238,7 @@ async def create_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]
     print(formatted_messages)
     print("##############################")
 
-    prompt = f"""
-    Based on the user's original message and the answers to the clarification questions, generate a comprehensive prompt that addresses the user's needs.
-
-    The messages and answers are:
-    {messages}
-
-    Create a well-structured prompt that incorporates:
-    - The goal identified from the answers
-    - The context provided by the user
-    - The desired output format
-    - The appropriate role/tone for the AI
-
-    Call the create_prompt_tool with your generated prompt as the parameter.
-
-    DO NOT return any text other than calling the create_prompt_tool with the prompt.
-    """
+    prompt = get_create_prompt(messages)
 
     tools = [create_prompt_tool]
 
@@ -363,21 +268,7 @@ async def apply_improvements(state: GraphState) -> Command[Literal["tool_supervi
     print("Applying improvements:", improvements)
     print("##############################")
 
-    prompt = f"""
-    Based on the original user request and the suggested improvements, generate an improved prompt.
-
-    Original context and requirements:
-    {formatted_messages}
-
-    Suggested improvements to apply:
-    {improvements}
-
-    Create a new, improved prompt that incorporates these suggestions while maintaining the original intent.
-
-    Call the create_prompt_tool with your improved prompt as the parameter.
-
-    DO NOT return any text other than calling the create_prompt_tool with the improved prompt.
-    """
+    prompt = get_apply_improvements_prompt(formatted_messages, improvements)
 
     tools = [create_prompt_tool]
 

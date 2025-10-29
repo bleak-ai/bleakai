@@ -1,4 +1,7 @@
+import json
+import operator
 import warnings
+from typing import Any, List
 
 from langchain_core.messages import (
     AIMessage,
@@ -7,6 +10,62 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+from langchain_core.tools import tool
+from langgraph.types import interrupt
+from pydantic import BaseModel
+
+
+def override_reducer(current_value, new_value):
+    """Reducer function that allows a new value to completely replace the old one."""
+    if isinstance(new_value, dict) and new_value.get("type") == "override":
+        return new_value.get("value", new_value)
+    if isinstance(new_value, dict) and new_value.get("type") == "override_last":
+        override_value = new_value.get("value", new_value)
+        # If current_value is a list, replace only the last element
+        if isinstance(current_value, list) and current_value:
+            current_list_trimmed = current_value[:-1]
+            list_with_new_value = current_list_trimmed + override_value
+            return list_with_new_value
+        # If current_value is not a list or is empty, return the override_value as a single-element list
+        return [override_value]
+    return operator.add(current_value, new_value)
+
+
+class Question(BaseModel):
+    """Represents a question to be asked to the user."""
+
+    question: str
+    options: List[str]  # Only for radio questions
+
+
+@tool(description="Tool to ask questions to the user.")
+def ask_questions_tool(questions: List[Question]) -> Any:
+    """"""
+
+    answers = interrupt({"questions": questions})
+
+    return json.loads(answers)
+
+
+@tool(description="Tool to create a prompt.")
+def create_prompt_tool(prompt: str) -> Any:
+    next_step = interrupt({"prompt": prompt})
+
+    return next_step
+
+
+@tool(description="Tool to test a prompt.")
+def test_prompt_tool(result: str) -> Any:
+    next_step = interrupt({"result": result})
+
+    return next_step
+
+
+@tool(description="Tool to suggest improvements.")
+def suggest_improvements_tool(improvements: list[str]) -> Any:
+    improvements = interrupt({"improvements": improvements})
+
+    return json.loads(improvements)
 
 
 def format_message(message: BaseMessage) -> str:
