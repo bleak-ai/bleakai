@@ -7,7 +7,7 @@ from langchain_core.messages import (
     AIMessage,
     ToolCall,
 )
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import START, StateGraph
 from langgraph.types import Command
 
 from prompts import (
@@ -30,7 +30,7 @@ llm_model = os.environ["LLM_MODEL"]
 llm = init_chat_model(llm_model)
 
 
-async def clarify_prompt(
+async def ask_questions_node(
     state: GraphState,
 ) -> Command[Literal["tool_supervisor"]]:
     """"""
@@ -66,14 +66,14 @@ async def tool_supervisor(
 ) -> Command[
     Literal[
         "generate_or_improve_prompt",
-        "clarify_prompt",
+        "ask_questions_node",
         "test_prompt",
         "suggest_improvements",
         "generate_or_improve_prompt",
         "__end__",
     ]
 ]:
-    """Process the tool calls from clarify_prompt and invoke the ask_questions_tool."""
+    """Process the tool calls from ask_questions_node and invoke the ask_questions_tool."""
     messages = state.get("messages", "")
     last_message = messages[-1]
 
@@ -83,7 +83,10 @@ async def tool_supervisor(
 
         if tool_name == "ask_questions_tool":
             return ask_questions_tool.invoke(
-                input={"questions": tool_args["questions"], "last_message": last_message}
+                input={
+                    "questions": tool_args["questions"],
+                    "last_message": last_message,
+                }
             )
         elif tool_name == "create_prompt_tool":
             return create_prompt_tool.invoke(
@@ -95,7 +98,10 @@ async def tool_supervisor(
             )
         elif tool_name == "suggest_improvements_tool":
             return suggest_improvements_tool.invoke(
-                input={"improvements": tool_args["improvements"], "last_message": last_message}
+                input={
+                    "improvements": tool_args["improvements"],
+                    "last_message": last_message,
+                }
             )
 
 
@@ -196,13 +202,13 @@ async def generate_or_improve_prompt(
 graph_builder = StateGraph(GraphState)  # remove update here, override prompt variable
 
 
-graph_builder.add_node("clarify_prompt", clarify_prompt)
+graph_builder.add_node("ask_questions_node", ask_questions_node)
 graph_builder.add_node("tool_supervisor", tool_supervisor)
 graph_builder.add_node("test_prompt", test_prompt)
 graph_builder.add_node("suggest_improvements", suggest_improvements)
 graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 # graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 
-graph_builder.add_edge(START, "clarify_prompt")
+graph_builder.add_edge(START, "ask_questions_node")
 
 graph = graph_builder.compile()
