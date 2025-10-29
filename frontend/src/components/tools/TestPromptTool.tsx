@@ -1,49 +1,64 @@
 "use client";
 
 import {Button} from "@/components/ui/button";
+import {Textarea} from "@/components/ui/textarea";
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
-import {ArrowUp} from "lucide-react";
+import {ArrowUp, MessageSquare} from "lucide-react";
 import {useState} from "react";
 
 export const TestPromptTool: ToolCallMessagePartComponent = ({}) => {
   const sendCommand = useLangGraphSendCommand();
   const [submitted, setSubmitted] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
 
   // const result: string = JSON.parse(argsText).result;
 
-  const handleSubmit = (next_step: "analyze" | "finish") => {
+  const handleFeedbackSubmit = () => {
     setSubmitted(true);
-    sendCommand({resume: next_step});
+    sendCommand({resume: feedbackText});
   };
 
   return (
     <div className="py-4">
       <h3 className="text-lg font-medium mb-3">Next Steps</h3>
-      <div className="flex gap-2">
-        {!submitted ? (
-          <>
+
+      {!submitted ? (
+        <div className="space-y-4">
+          {/* Feedback form always visible */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-4 w-4 text-zinc-500" />
+              <p className="text-sm font-medium text-zinc-700">
+                Feedback (optional)
+              </p>
+            </div>
+
+            <Textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Please describe what went wrong or what you'd like to improve..."
+              className="min-h-[100px] resize-y border-zinc-300 focus:border-zinc-500 focus:ring-zinc-500/20"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
             <Button
-              onClick={() => handleSubmit("analyze")}
+              onClick={handleFeedbackSubmit}
               className="bg-zinc-700 hover:bg-zinc-800 text-white gap-2"
               size="sm"
             >
               <ArrowUp className="h-4 w-4" />
-              Improve
+              Improve Prompt
             </Button>
-            <Button
-              onClick={() => handleSubmit("finish")}
-              variant="outline"
-              className="border-zinc-700 text-zinc-500 hover:bg-zinc-200"
-              size="sm"
-            >
-              Finish
-            </Button>
-          </>
-        ) : (
-          <p className="text-sm text-zinc-400">Processing...</p>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-zinc-400">Processing your feedback...</p>
+        </div>
+      )}
     </div>
   );
 };

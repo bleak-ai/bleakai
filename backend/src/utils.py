@@ -10,7 +10,6 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import tool
-from langgraph.graph import END
 from langgraph.types import Command, interrupt
 
 from state import Question
@@ -74,30 +73,19 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
 
 @tool(description="Tool to test a prompt.")
 def test_prompt_tool(result: str, last_message: Any) -> Any:
-    next_step = interrupt({"result": result})
+    feedback = interrupt({"result": result})
 
-    if next_step == "analyze":
-        return Command(
-            goto="suggest_improvements",
-            update={
-                "messages": {
-                    "value": [AIMessage(content="test_prompt_tool called")],
-                    "type": "override_last",
-                },
-                "result": result,
+    human_feedback = HumanMessage(content=feedback)
+    return Command(
+        goto="suggest_improvements",
+        update={
+            "messages": {
+                "value": [human_feedback],
+                "type": "override_last",
             },
-        )
-    elif next_step == "finish":
-        return Command(
-            goto=END,
-            update={
-                "messages": {
-                    "value": [AIMessage(content="test_prompt_tool called")],
-                    "type": "override_last",
-                },
-                "prompt": result,
-            },
-        )
+            "result": result,
+        },
+    )
 
 
 @tool(description="Tool to suggest improvements.")
