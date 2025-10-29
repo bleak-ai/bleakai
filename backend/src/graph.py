@@ -30,37 +30,6 @@ llm_model = os.environ["LLM_MODEL"]
 llm = init_chat_model(llm_model)
 
 
-async def ask_questions_node(
-    state: GraphState,
-) -> Command[Literal["tool_supervisor"]]:
-    """"""
-    print("clarify state")
-    messages = state.get("messages", [])
-
-    # Extract already asked questions from message history
-    formatted_messages = get_formatted_messages(messages)
-
-    print("##############################")
-    print(formatted_messages)
-    print("##############################")
-
-    # asked_questions_list = (
-    #     chr(10).join(f"- {q}" for q in asked_questions)
-    #     if asked_questions
-    #     else "No questions asked yet"
-    # )
-    prompt = CLARIFY_PROMPT.format(
-        formatted_messages=formatted_messages, asked_questions_list=""
-    )
-    tools = [ask_questions_tool]
-
-    llm_with_tools = llm.bind_tools(tools)
-
-    response = llm_with_tools.invoke([("human", prompt)])
-
-    return Command(goto="tool_supervisor", update={"messages": [response]})
-
-
 async def tool_supervisor(
     state: GraphState,
 ) -> Command[
@@ -103,6 +72,37 @@ async def tool_supervisor(
                     "last_message": last_message,
                 }
             )
+
+
+async def ask_questions_node(
+    state: GraphState,
+) -> Command[Literal["tool_supervisor"]]:
+    """"""
+    print("clarify state")
+    messages = state.get("messages", [])
+
+    # Extract already asked questions from message history
+    formatted_messages = get_formatted_messages(messages)
+
+    print("##############################")
+    print(formatted_messages)
+    print("##############################")
+
+    # asked_questions_list = (
+    #     chr(10).join(f"- {q}" for q in asked_questions)
+    #     if asked_questions
+    #     else "No questions asked yet"
+    # )
+    prompt = CLARIFY_PROMPT.format(
+        formatted_messages=formatted_messages, asked_questions_list=""
+    )
+    tools = [ask_questions_tool]
+
+    llm_with_tools = llm.bind_tools(tools)
+
+    response = llm_with_tools.invoke([("human", prompt)])
+
+    return Command(goto="tool_supervisor", update={"messages": [response]})
 
 
 # Based on result and messages, suggest improvements.

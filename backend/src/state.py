@@ -25,7 +25,7 @@ class Question(BaseModel):
     """Represents a question to be asked to the user."""
 
     question: str
-    options: List[str]  # Only for radio questions
+    options: List[str] | None = None
 
 
 class GraphState(dict):

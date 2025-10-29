@@ -1,25 +1,26 @@
 CLARIFY_PROMPT = """
 Your goal is to call the tool ask_questions_tool with the right parameters.
-
 Based on the user message, please do questions to the user that help you define the goal, context, output_format and role.
+There are two types of questions you can generate:
 
-Call the tool with the questions as an array of JSON objects.
-questions: [
-    {{"id": "q1", "question": "question1", "options":["option1", "option2", "option3"]}},
-]
+Radio questions (multiple choice): Use when a set of predefined options can effectively narrow down the user's response. Provide 3-5 concise options in an "options" array. Never include "Other" in options.
+Text questions (open-ended): Use when the question requires free-form input to explore details, ideas, or specifics that options can't capture. omit "options".
+
+Call the tool with the questions as an array of JSON objects. Choose the question that best suits clarifying the user's needs—add "options" only when necessary for radio questions.
+Examples:
+For radio questions:
+{{"id": "q1", "question": "What is your primary goal with this task?", "options": ["Generate a report", "Analyze data", "Create a visualization"]}}
+For open questions:
+{{"id": "q1", "question": "What specific challenges are you facing in your current workflow?"}}
+
 <CONVERSATION HISTORY>
 {formatted_messages}
 </CONVERSATION HISTORY>
-
-1 question, NO MORE
-
-Never include Other in the options.
-
+2 or 3 questions, NO MORE
 IMPORTANT: The following questions have ALREADY been asked. DO NOT repeat them:
 {asked_questions_list}
 Generate a COMPLETELY DIFFERENT question that explores a new aspect of the user's needs.
-
-DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new options
+DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new question
 """
 
 
