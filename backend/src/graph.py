@@ -12,9 +12,8 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
 from prompts import (
-    APPLY_IMPROVEMENTS_PROMPT,
     CLARIFY_PROMPT,
-    CREATE_PROMPT,
+    PROMPT_TEMPLATE,
     SUGGEST_IMPROVEMENTS_PROMPT,
 )
 from state import GraphState
@@ -70,11 +69,11 @@ async def tool_supervisor(
     state: GraphState,
 ) -> Command[
     Literal[
-        "create_prompt",
+        "generate_or_improve_prompt",
         "clarify_prompt",
         "test_prompt",
         "suggest_improvements",
-        "apply_improvements",
+        "generate_or_improve_prompt",
         "__end__",
     ]
 ]:
@@ -97,7 +96,7 @@ async def tool_supervisor(
             )
 
             return Command(
-                goto="create_prompt",
+                goto="generate_or_improve_prompt",
                 update={
                     "messages": {
                         "value": [AIMessage(content=questions_with_answers)],
@@ -167,7 +166,9 @@ async def tool_supervisor(
 
             ai_message = AIMessage(content=improvements)
 
-            return Command(goto="apply_improvements", update={"messages": [ai_message]})
+            return Command(
+                goto="generate_or_improve_prompt", update={"messages": [ai_message]}
+            )
 
 
 # Based on result and messages, suggest improvements.
@@ -221,56 +222,44 @@ async def test_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
     )  # remove update here, override result variable
 
 
-# Based on questions creates a prompt
-async def create_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
-    """Generate a prompt."""
+async def generate_or_improve_prompt(
+    state: GraphState,
+) -> Command[Literal["tool_supervisor"]]:
+    """Create or improve a prompt depending on state."""
     messages = state.get("messages", [])
+    current_prompt = state.get("prompt", None)
 
     formatted_messages = get_formatted_messages(messages)
 
-    print("##############################")
-    print(formatted_messages)
-    print("##############################")
+    # Determine if this is a creation or improvement step
+    is_improvement = current_prompt is not None and len(messages) > 0
 
-    prompt = CREATE_PROMPT.format(messages=formatted_messages)
+    if is_improvement:
+        # Assume last message contains improvement suggestions
+        improvements = messages[-1].content
+        previous_messages = messages[:-1]
+        formatted_previous = get_formatted_messages(previous_messages)
+
+        prompt = PROMPT_TEMPLATE.format(
+            mode="improvement",
+            formatted_messages=formatted_previous,
+            improvements=improvements,
+            prompt=current_prompt,
+        )
+    else:
+        prompt = PROMPT_TEMPLATE.format(
+            mode="creation",
+            formatted_messages=formatted_messages,
+            improvements="",
+            prompt="",
+        )
+
+    print("##############################")
+    print(prompt)
+    print("##############################")
 
     tools = [create_prompt_tool]
-
     llm_with_tools = llm.bind_tools(tools)
-
-    res = llm_with_tools.invoke(prompt)
-
-    return Command(
-        goto="tool_supervisor", update={"messages": [res]}
-    )  # remove update here, override prompt variable
-
-
-# Same as create prompt but  for improvements (merge together?)
-async def apply_improvements(state: GraphState) -> Command[Literal["tool_supervisor"]]:
-    """Apply improvements to create an improved prompt."""
-    messages = state.get("messages", [])
-
-    # Get the improvements from the last message
-    improvements = messages[-1].content
-
-    # Get all previous messages to understand the original context
-    previous_messages = messages[:-1]
-
-    formatted_messages = get_formatted_messages(previous_messages)
-
-    print("##############################")
-    print(formatted_messages)
-    print("Applying improvements:", improvements)
-    print("##############################")
-
-    prompt = APPLY_IMPROVEMENTS_PROMPT.format(
-        formatted_messages=formatted_messages, improvements=improvements
-    )
-
-    tools = [create_prompt_tool]
-
-    llm_with_tools = llm.bind_tools(tools)
-
     res = llm_with_tools.invoke(prompt)
 
     return Command(goto="tool_supervisor", update={"messages": [res]})
@@ -283,8 +272,8 @@ graph_builder.add_node("clarify_prompt", clarify_prompt)
 graph_builder.add_node("tool_supervisor", tool_supervisor)
 graph_builder.add_node("test_prompt", test_prompt)
 graph_builder.add_node("suggest_improvements", suggest_improvements)
-graph_builder.add_node("create_prompt", create_prompt)
-graph_builder.add_node("apply_improvements", apply_improvements)
+graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
+# graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 
 graph_builder.add_edge(START, "clarify_prompt")
 
