@@ -50,7 +50,7 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
 
     if next_step == "questions":
         return Command(
-            goto="clarify_prompt",
+            goto="ask_questions_tool",
             update={
                 "messages": {
                     "value": [AIMessage(content="create_prompt_tool called")],
@@ -106,13 +106,11 @@ def suggest_improvements_tool(improvements: list[str], last_message: Any) -> Any
     parsed_improvements = json.loads(improvements_result)
 
     if len(parsed_improvements) == 0:
-        return Command(goto="clarify_prompt")
+        return Command(goto="ask_questions_tool")
 
     ai_message = AIMessage(content=parsed_improvements)
 
-    return Command(
-        goto="generate_or_improve_prompt", update={"messages": [ai_message]}
-    )
+    return Command(goto="generate_or_improve_prompt", update={"messages": [ai_message]})
 
 
 def format_message(message: BaseMessage) -> str:
