@@ -1,7 +1,7 @@
 "use client";
 
 import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardHeader} from "@/components/ui/card";
+import {Card, CardContent} from "@/components/ui/card";
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
 import {ArrowRight, Check, Copy} from "lucide-react";
@@ -28,12 +28,13 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
   return (
     <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
       <Card className="border-0 bg-white shadow-sm overflow-hidden">
-        <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
+        {/* <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
           Prompt
-        </CardHeader>
+        </CardHeader> */}
         <CardContent className="space-y-2 px-8 pb-2">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
+              <span className="text-xl font-semibold">Prompt </span>
               <Button
                 variant="ghost"
                 size="sm"

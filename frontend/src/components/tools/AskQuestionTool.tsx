@@ -2,17 +2,10 @@
 
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
-import {HelpCircle} from "lucide-react";
 import {useState} from "react";
 import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "../ui/card";
+import {Card, CardContent} from "../ui/card";
 
 export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   const sendCommand = useLangGraphSendCommand();
@@ -26,10 +19,6 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
     ...question,
     options: question.options?.filter((option) => option !== "Other")
   }));
-
-  const answeredCount = Object.keys(answers).length;
-  const totalQuestions = questionsWithoutOther.length;
-  const progressPercentage = (answeredCount / totalQuestions) * 100;
 
   const handleSubmit = () => {
     setSubmitted(true);
@@ -46,7 +35,7 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   return (
     <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
       <Card className="border-primary/20 bg-gradient-to-br from-card to-card/50">
-        <CardHeader className="pb-3">
+        {/* <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -64,7 +53,7 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
               style={{width: `${progressPercentage}%`}}
             />
           </div>
-        </CardHeader>
+        </CardHeader> */}
 
         <CardContent className="space-y-6">
           <div className="space-y-4">
@@ -77,12 +66,7 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
 
           <div className="flex gap-3 w-full pt-2">
             {!submitted ? (
-              <Button
-                onClick={handleSubmit}
-                disabled={answeredCount < totalQuestions}
-                className="w-full"
-                size="lg"
-              >
+              <Button onClick={handleSubmit} className="w-full" size="lg">
                 Submit Answers
               </Button>
             ) : (
