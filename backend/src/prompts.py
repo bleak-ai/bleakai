@@ -1,6 +1,4 @@
-def get_clarify_prompt(formatted_messages: str, asked_questions: set) -> str:
-    """Get the prompt for clarifying user requirements."""
-    return f"""
+CLARIFY_PROMPT = """
     Your goal is to call the tool ask_questions_tool with the right parameters.
 
     Based on the user message, please do questions to the user that help you define the goal, context, output_format and role.
@@ -8,7 +6,7 @@ def get_clarify_prompt(formatted_messages: str, asked_questions: set) -> str:
     Call the tool with the questions as an array of JSON objects.
     questions: [
         {{"id": "q1", "question": "question1", "options":["option1", "option2", "option3"]}},
-
+    ]
     <CONVERSATION HISTORY>
     {formatted_messages}
     </CONVERSATION HISTORY>
@@ -18,8 +16,7 @@ def get_clarify_prompt(formatted_messages: str, asked_questions: set) -> str:
     Never include Other in the options.
 
     IMPORTANT: The following questions have ALREADY been asked. DO NOT repeat them:
-    {chr(10).join(f"- {q}" for q in asked_questions) if asked_questions else "No questions asked yet"}
-
+    {asked_questions_list}
     Generate a COMPLETELY DIFFERENT question that explores a new aspect of the user's needs.
 
     DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new options

@@ -12,8 +12,8 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
 from prompts import (
+    CLARIFY_PROMPT,
     get_apply_improvements_prompt,
-    get_clarify_prompt,
     get_create_prompt,
     get_suggest_improvements_prompt,
 )
@@ -41,23 +41,23 @@ async def clarify_prompt(
     messages = state.get("messages", [])
 
     # Extract already asked questions from message history
-    asked_questions = set()
-    for msg in messages:
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tool_call in msg.tool_calls:
-                if tool_call.get("name") == "ask_questions_tool":
-                    questions = tool_call.get("args", {}).get("questions", [])
-                    for q in questions:
-                        asked_questions.add(q.get("question", ""))
-
     formatted_messages = get_formatted_messages(messages)
 
     print("##############################")
     print(formatted_messages)
     print("##############################")
 
-    prompt = get_clarify_prompt(formatted_messages, asked_questions)
+    # asked_questions_list = (
+    #     chr(10).join(f"- {q}" for q in asked_questions)
+    #     if asked_questions
+    #     else "No questions asked yet"
+    # )
+    prompt = CLARIFY_PROMPT.format(
+        formatted_messages=formatted_messages, asked_questions_list=""
+    )
     tools = [ask_questions_tool]
+
+    print("prompt", prompt)
 
     llm_with_tools = llm.bind_tools(tools)
 
