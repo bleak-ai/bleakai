@@ -114,6 +114,12 @@ export default function Header() {
                   >
                     Chat
                   </a>
+                  <a
+                    href="/prompt-tester"
+                    className="block py-2 text-sm hover:text-foreground/80"
+                  >
+                    Prompt tester
+                  </a>
                 </div>
               </div>
             </div>
