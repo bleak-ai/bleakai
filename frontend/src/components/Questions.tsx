@@ -28,7 +28,7 @@ export default function Questions({
     // "Other" is selected if either:
     // 1. The answer is exactly "Other", or
     // 2. The answer is not one of the predefined options (meaning it's custom text)
-    const isOtherOption = answers[questionIndex] === "Other";
+    const isOtherOption = answers[questionIndex] === "";
     const isCustomAnswer =
       answers[questionIndex] &&
       !question.options?.includes(answers[questionIndex]);
@@ -37,9 +37,9 @@ export default function Questions({
     return (
       <div className="space-y-3">
         <RadioGroup
-          value={isOtherSelected ? "Other" : answers[questionIndex] || ""}
+          value={isOtherSelected ? "" : answers[questionIndex] || " "}
           onValueChange={(value) => {
-            if (value === "Other") {
+            if (value === "") {
               // When "Other" is selected, ensure the custom input is focused
               setTimeout(() => {
                 const input = document.getElementById(
@@ -67,7 +67,7 @@ export default function Questions({
           ))}
 
           <div className="flex items-start space-x-2 ">
-            <RadioGroupItem value="Other" id={`${questionIndex}-other`} />
+            <RadioGroupItem value="" id={`${questionIndex}-other`} />
             <div className="flex-1">
               {isOtherSelected ? (
                 <div className="">

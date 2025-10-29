@@ -12,7 +12,7 @@ export default function Home() {
           <div className="mb-16">
             <div className="flex items-center justify-center">
               <h1 className="text-7xl sm:text-8xl md:text-9xl font-light tracking-tight mb-4 text-foreground">
-                Bleak AI
+                Prompt Tester
               </h1>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function Home() {
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    BleakAI Chatbot
+                    Prompt Tester Chatbot
                   </h3>
                   <div className="bg-background rounded border border-border p-6 space-y-4">
                     <label className="text-sm font-medium text-foreground block">
@@ -101,11 +101,11 @@ export default function Home() {
         <div className="container-max">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-foreground mb-4">
-              See BleakAI in Action
+              See Prompt Tester in Action
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Watch how BleakAI transforms natural conversation into structured,
-              interactive elements
+              Watch how Prompt Tester transforms natural conversation into
+              structured, interactive elements
             </p>
           </div>
           <div className="flex items-center justify-center">
@@ -141,7 +141,7 @@ export default function Home() {
               className="px-8 py-4 text-base font-medium interactive-scale"
               onClick={() => (window.location.href = "/chat")}
             >
-              Try BleakAI Now
+              Try Prompt Tester Now
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

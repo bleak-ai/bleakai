@@ -1,19 +1,26 @@
-import {type ToolCallMessagePartComponent} from "@assistant-ui/react";
+"use client";
+
+import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
+import {HelpCircle} from "lucide-react";
 import {useState} from "react";
 import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "../ui/card";
 
 type Answer = {
-  // question: string;
   answer: string;
 };
 
 export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   const sendCommand = useLangGraphSendCommand();
 
-  // const interrupt = useLangGraphInterruptState();
-  // const questions: QuestionType[] = interrupt?.value.questions ?? [];
   const questions: QuestionType[] = JSON.parse(argsText).questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -24,13 +31,14 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
     options: question.options?.filter((option) => option !== "Other")
   }));
 
+  const answeredCount = Object.keys(answers).length;
+  const totalQuestions = questionsWithoutOther.length;
+  const progressPercentage = (answeredCount / totalQuestions) * 100;
+
   const handleSubmit = () => {
     setSubmitted(true);
-    const formattedAnswers: Answer[] = questionsWithoutOther.map(
-      (_: QuestionType, index) => ({
-        // question: question.question,
-        answer: `Question ${index}. Answer: ${answers[index]}`
-      })
+    const formattedAnswers: string[] = questionsWithoutOther.map(
+      (_: QuestionType, index) => answers[index]
     );
     sendCommand({resume: JSON.stringify(formattedAnswers)});
   };
@@ -41,22 +49,56 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
 
   return (
     <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <div className="flex flex-col gap-2">
-        <div>
-          <Questions
-            questions={questionsWithoutOther}
-            onAnswersChange={handleAnswersChange}
-            answers={answers}
-          />
-        </div>
-        <div className="flex gap-2 w-full mt-6">
-          {!submitted ? (
-            <Button onClick={handleSubmit}>Submit</Button>
-          ) : (
-            <p> Answers sent. Generating response... </p>
-          )}
-        </div>
-      </div>
+      <Card className="border-primary/20 bg-gradient-to-br from-card to-card/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <HelpCircle className="h-5 w-5 text-primary" />
+                Answer Questions
+              </CardTitle>
+              <CardDescription>
+                {answeredCount} of {totalQuestions} questions answered
+              </CardDescription>
+            </div>
+          </div>
+          <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{width: `${progressPercentage}%`}}
+            />
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Questions
+              questions={questionsWithoutOther}
+              onAnswersChange={handleAnswersChange}
+              answers={answers}
+            />
+          </div>
+
+          <div className="flex gap-3 w-full pt-2">
+            {!submitted ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={answeredCount < totalQuestions}
+                className="w-full"
+                size="lg"
+              >
+                Submit Answers
+              </Button>
+            ) : (
+              <div className="flex items-center justify-center w-full gap-2 py-2">
+                <p className="text-sm text-muted-foreground font-medium">
+                  Generating Prompt...
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

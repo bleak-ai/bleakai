@@ -32,6 +32,9 @@ import {cn} from "@/lib/utils";
 import {LazyMotion, MotionConfig, domAnimation} from "motion/react";
 import * as m from "motion/react-m";
 import {AskQuestionTool} from "../tools/AskQuestionTool";
+import {CreatePromptTool} from "../tools/CreatePromptTool";
+import {SuggestImprovementsTool} from "../tools/SuggestImprovementsTool";
+import {TestPromptTool} from "../tools/TestPromptTool";
 
 export const Thread: FC = () => {
   return (
@@ -126,24 +129,25 @@ const ThreadWelcomeSuggestions: FC = () => {
     <div className="aui-thread-welcome-suggestions grid w-full gap-2 @md:grid-cols-2">
       {[
         {
-          title: "What's the weather",
-          label: "in San Francisco?",
-          action: "What's the weather in San Francisco?"
+          title: "Write a tweet",
+          label: "about the new Langgraph version v1",
+          action: "Write a tweet about the new Langgraph version v1"
         },
         {
-          title: "Explain React hooks",
-          label: "like useState and useEffect",
-          action: "Explain React hooks like useState and useEffect"
+          title: "Craft a post",
+          label: "on a recent tech breakthrough",
+          action: "Craft a post on a recent tech breakthrough"
         },
         {
-          title: "Write a SQL query",
-          label: "to find top customers",
-          action: "Write a SQL query to find top customers"
+          title: "Design a status update",
+          label: "for a local community event",
+          action: "Design a status update for a local community event"
         },
         {
-          title: "Create a meal plan",
-          label: "for healthy weight loss",
-          action: "Create a meal plan for healthy weight loss"
+          title: "Write a linkedin post",
+          label: "about my new ai agent",
+          action:
+            "Write a linkedin post about my new ai agent, it uses heavily human in the loop and the goal of it is to help users write better prompts"
         }
       ].map((suggestedAction, index) => (
         <m.div
@@ -263,7 +267,10 @@ const AssistantMessage: FC = () => {
               tools: {
                 Fallback: ToolFallback,
                 by_name: {
-                  ask_questions_tool: AskQuestionTool
+                  ask_questions_tool: AskQuestionTool,
+                  create_prompt_tool: CreatePromptTool,
+                  test_prompt_tool: TestPromptTool,
+                  suggest_improvements_tool: SuggestImprovementsTool
                 }
               }
             }}

@@ -5,24 +5,15 @@ import {useLangGraphRuntime} from "@assistant-ui/react-langgraph";
 import React, {useState} from "react";
 
 import {Thread} from "@/components/assistant-ui/thread";
-import {BetaBlockerModal} from "@/components/BetaBlockerModal";
 import {createThread, sendMessage} from "@/utils/chatApi";
-import {hasBetaAccessBypass} from "@/utils/url";
 
 export default function Chat() {
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showBetaBlocker, setShowBetaBlocker] = useState(false);
 
   React.useEffect(() => {
     // Check if user has beta access bypass
-    if (!hasBetaAccessBypass()) {
-      setShowBetaBlocker(true);
-      setIsLoading(false);
-      return;
-    }
-
     const initializeChat = async () => {
       try {
         setIsLoading(true);
@@ -42,6 +33,7 @@ export default function Chat() {
 
     initializeChat();
   }, []);
+
   const runtime = useLangGraphRuntime({
     stream: async (messages, config) => {
       if (!currentThreadId) {
@@ -71,15 +63,9 @@ export default function Chat() {
 
   return (
     <>
-      <BetaBlockerModal
-        isOpen={showBetaBlocker}
-        onClose={() => setShowBetaBlocker(false)}
-      />
-      {!showBetaBlocker && (
-        <AssistantRuntimeProvider runtime={runtime}>
-          <Thread />
-        </AssistantRuntimeProvider>
-      )}
+      <AssistantRuntimeProvider runtime={runtime}>
+        <Thread />
+      </AssistantRuntimeProvider>
     </>
   );
 }
