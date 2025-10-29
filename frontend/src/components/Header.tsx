@@ -45,7 +45,7 @@ export default function Header() {
             <NavigationMenuItem>
               <NavigationMenuTrigger>Features</NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div className="grid gap-3 p-6 w-[400px]">
+                <div className="grid gap-3 p-2 w-[400px]">
                   <NavigationMenuLink
                     href="/chat"
                     className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
@@ -53,6 +53,17 @@ export default function Header() {
                     <div className="text-sm font-medium leading-none">Chat</div>
                     <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                       Test bleakai and see what it does!
+                    </p>
+                  </NavigationMenuLink>
+                  <NavigationMenuLink
+                    href="/prompt-tester"
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="text-sm font-medium leading-none">
+                      Prompt tester
+                    </div>
+                    <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                      Use the prompt-tester to generate better prompts
                     </p>
                   </NavigationMenuLink>
                 </div>

@@ -12,7 +12,11 @@ function App() {
       <main className="min-h-screen h-dvh px-2 md:px-4">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/chat" element={<Chat />} />
+          <Route path="/chat" element={<Chat assistantKey="default" />} />
+          <Route
+            path="/prompt-tester"
+            element={<Chat assistantKey="prompt-tester" />}
+          />
         </Routes>
       </main>
 

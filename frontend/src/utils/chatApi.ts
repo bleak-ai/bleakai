@@ -29,12 +29,15 @@ export const sendMessage = async (params: {
   threadId: string;
   messages?: LangChainMessage[];
   config?: LangGraphSendMessageConfig;
+  assistantId?: string;
 }) => {
   const client = createClient();
   const config = params.config ?? {};
+  const assistantId = params.assistantId || import.meta.env.VITE_PUBLIC_LANGGRAPH_ASSISTANT_ID;
+
   return client.runs.stream(
     params.threadId,
-    import.meta.env.VITE_PUBLIC_LANGGRAPH_ASSISTANT_ID,
+    assistantId,
     {
       input: params.messages?.length
         ? {

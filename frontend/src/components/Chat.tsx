@@ -6,8 +6,13 @@ import React, {useState} from "react";
 
 import {Thread} from "@/components/assistant-ui/thread";
 import {createThread, sendMessage} from "@/utils/chatApi";
+import {getAssistantId} from "@/config/assistants";
 
-export default function Chat() {
+interface ChatProps {
+  assistantKey?: string;
+}
+
+export default function Chat({ assistantKey = 'default' }: ChatProps) {
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export default function Chat() {
     };
 
     initializeChat();
-  }, []);
+  }, [assistantKey]);
 
   const runtime = useLangGraphRuntime({
     stream: async (messages, config) => {
@@ -40,12 +45,14 @@ export default function Chat() {
         throw new Error("Cannot send message: Thread is not initialized.");
       }
 
-      console.log(`Streaming message to thread: ${currentThreadId}`);
+      console.log(`Streaming message to thread: ${currentThreadId} with assistant: ${assistantKey}`);
 
+      const assistantId = getAssistantId(assistantKey);
       const stream = await sendMessage({
         config,
         threadId: currentThreadId,
-        messages
+        messages,
+        assistantId
       });
 
       return stream;
