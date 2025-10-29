@@ -13,6 +13,8 @@ For radio questions:
 For open questions:
 {{"id": "q1", "question": "What specific challenges are you facing in your current workflow?"}}
 
+Always use at least 1 question of each type.
+
 <CONVERSATION HISTORY>
 {formatted_messages}
 </CONVERSATION HISTORY>
