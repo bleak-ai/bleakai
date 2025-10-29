@@ -2,7 +2,7 @@ import operator
 from typing import Annotated, List
 
 from langchain_core.messages import MessageLikeRepresentation
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 def override_reducer(current_value, new_value):
@@ -32,5 +32,11 @@ class GraphState(dict):
     """State for the prompt refinement graph."""
 
     messages: Annotated[list[MessageLikeRepresentation], override_reducer]
-    result: str
-    prompt: str
+    result: str = Field(
+        default="",
+        description="The last result of the prompt.",
+    )
+    prompt: str = Field(
+        default="",
+        description="The current prompt.",
+    )

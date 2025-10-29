@@ -105,6 +105,49 @@ async def ask_questions_node(
     return Command(goto="tool_supervisor", update={"messages": [response]})
 
 
+async def generate_or_improve_prompt(
+    state: GraphState,
+) -> Command[Literal["tool_supervisor"]]:
+    """Create or improve a prompt depending on state."""
+    messages = state.get("messages", [])
+    current_prompt = state.get("prompt", None)
+
+    formatted_messages = get_formatted_messages(messages)
+
+    # Determine if this is a creation or improvement step
+    is_improvement = current_prompt is not None and len(messages) > 0
+
+    if is_improvement:
+        # Assume last message contains improvement suggestions
+        improvements = messages[-1].content
+        previous_messages = messages[:-1]
+        formatted_previous = get_formatted_messages(previous_messages)
+
+        prompt = PROMPT_TEMPLATE.format(
+            mode="improvement",
+            formatted_messages=formatted_previous,
+            improvements=improvements,
+            prompt=current_prompt,
+        )
+    else:
+        prompt = PROMPT_TEMPLATE.format(
+            mode="creation",
+            formatted_messages=formatted_messages,
+            improvements="",
+            prompt="",
+        )
+
+    print("###############PROMPT to CREATE PROMPT###############")
+    print(prompt)
+    print("##############################")
+
+    tools = [create_prompt_tool]
+    llm_with_tools = llm.bind_tools(tools)
+    res = llm_with_tools.invoke(prompt)
+
+    return Command(goto="tool_supervisor", update={"messages": [res]})
+
+
 # Based on result and messages, suggest improvements.
 async def suggest_improvements(
     state: GraphState,
@@ -154,49 +197,6 @@ async def test_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
     return Command(
         goto="tool_supervisor", update={"messages": [ai_message]}
     )  # remove update here, override result variable
-
-
-async def generate_or_improve_prompt(
-    state: GraphState,
-) -> Command[Literal["tool_supervisor"]]:
-    """Create or improve a prompt depending on state."""
-    messages = state.get("messages", [])
-    current_prompt = state.get("prompt", None)
-
-    formatted_messages = get_formatted_messages(messages)
-
-    # Determine if this is a creation or improvement step
-    is_improvement = current_prompt is not None and len(messages) > 0
-
-    if is_improvement:
-        # Assume last message contains improvement suggestions
-        improvements = messages[-1].content
-        previous_messages = messages[:-1]
-        formatted_previous = get_formatted_messages(previous_messages)
-
-        prompt = PROMPT_TEMPLATE.format(
-            mode="improvement",
-            formatted_messages=formatted_previous,
-            improvements=improvements,
-            prompt=current_prompt,
-        )
-    else:
-        prompt = PROMPT_TEMPLATE.format(
-            mode="creation",
-            formatted_messages=formatted_messages,
-            improvements="",
-            prompt="",
-        )
-
-    print("##############################")
-    print(prompt)
-    print("##############################")
-
-    tools = [create_prompt_tool]
-    llm_with_tools = llm.bind_tools(tools)
-    res = llm_with_tools.invoke(prompt)
-
-    return Command(goto="tool_supervisor", update={"messages": [res]})
 
 
 graph_builder = StateGraph(GraphState)  # remove update here, override prompt variable
