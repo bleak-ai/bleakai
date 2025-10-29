@@ -49,8 +49,8 @@ class GraphState(TypedDict):
     prompt: str
 
 
-llm = init_chat_model("ollama:granite4:micro")
-# llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
+# llm = init_chat_model("ollama:granite4:micro")
+llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
 
 
 @tool(description="Tool to ask questions to the user.")
