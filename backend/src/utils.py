@@ -50,7 +50,7 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
 
     if next_step == "questions":
         return Command(
-            goto="ask_questions_tool",
+            goto="ask_questions_node",
             update={
                 "messages": {
                     "value": [AIMessage(content="create_prompt_tool called")],
@@ -106,7 +106,7 @@ def suggest_improvements_tool(improvements: list[str], last_message: Any) -> Any
     parsed_improvements = json.loads(improvements_result)
 
     if len(parsed_improvements) == 0:
-        return Command(goto="ask_questions_tool")
+        return Command(goto="ask_questions_node")
 
     ai_message = AIMessage(content=parsed_improvements)
 
