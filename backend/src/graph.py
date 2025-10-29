@@ -1,12 +1,11 @@
 import os
-from typing import Annotated, Literal, TypedDict
+from typing import Literal
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import (
     AIMessage,
     HumanMessage,
-    MessageLikeRepresentation,
     ToolCall,
 )
 from langgraph.graph import END, START, StateGraph
@@ -18,24 +17,17 @@ from prompts import (
     get_create_prompt,
     get_suggest_improvements_prompt,
 )
+from state import GraphState
 from utils import (
     ask_questions_tool,
     create_prompt_tool,
     format_questions_with_answers,
     get_formatted_messages,
-    override_reducer,
     suggest_improvements_tool,
     test_prompt_tool,
 )
 
 load_dotenv()
-
-
-class GraphState(TypedDict):
-    messages: Annotated[list[MessageLikeRepresentation], override_reducer]
-    result: str
-    prompt: str
-
 
 llm_model = os.environ["LLM_MODEL"]
 llm = init_chat_model(llm_model)
@@ -265,6 +257,7 @@ async def apply_improvements(state: GraphState) -> Command[Literal["tool_supervi
     formatted_messages = get_formatted_messages(previous_messages)
 
     print("##############################")
+    print(formatted_messages)
     print("Applying improvements:", improvements)
     print("##############################")
 
