@@ -1,5 +1,6 @@
 import json
 import operator
+import os
 from typing import Annotated, Any, List, Literal, TypedDict
 
 from dotenv import load_dotenv
@@ -49,8 +50,8 @@ class GraphState(TypedDict):
     prompt: str
 
 
-# llm = init_chat_model("ollama:granite4:micro")
-llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
+llm_model = os.environ["LLM_MODEL"]
+llm = init_chat_model(llm_model)
 
 
 @tool(description="Tool to ask questions to the user.")
