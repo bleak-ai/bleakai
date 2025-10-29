@@ -12,10 +12,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
 from prompts import (
+    APPLY_IMPROVEMENTS_PROMPT,
     CLARIFY_PROMPT,
-    get_apply_improvements_prompt,
-    get_create_prompt,
-    get_suggest_improvements_prompt,
+    CREATE_PROMPT,
+    SUGGEST_IMPROVEMENTS_PROMPT,
 )
 from state import GraphState
 from utils import (
@@ -185,7 +185,9 @@ async def suggest_improvements(
     print(formatted_messages)
     print("##############################")
 
-    prompt = get_suggest_improvements_prompt(messages, result)
+    prompt = SUGGEST_IMPROVEMENTS_PROMPT.format(
+        messages=formatted_messages, result=result
+    )
 
     tools = [suggest_improvements_tool]
 
@@ -230,7 +232,7 @@ async def create_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]
     print(formatted_messages)
     print("##############################")
 
-    prompt = get_create_prompt(messages)
+    prompt = CREATE_PROMPT.format(messages=formatted_messages)
 
     tools = [create_prompt_tool]
 
@@ -261,7 +263,9 @@ async def apply_improvements(state: GraphState) -> Command[Literal["tool_supervi
     print("Applying improvements:", improvements)
     print("##############################")
 
-    prompt = get_apply_improvements_prompt(formatted_messages, improvements)
+    prompt = APPLY_IMPROVEMENTS_PROMPT.format(
+        formatted_messages=formatted_messages, improvements=improvements
+    )
 
     tools = [create_prompt_tool]
 

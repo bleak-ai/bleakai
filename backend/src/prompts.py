@@ -23,9 +23,7 @@ CLARIFY_PROMPT = """
   """
 
 
-def get_create_prompt(messages: str) -> str:
-    """Get the prompt for creating a prompt based on user input."""
-    return f"""
+CREATE_PROMPT = """
     Based on the user's original message and the answers to the clarification questions, generate a comprehensive prompt that addresses the user's needs.
 
     The messages and answers are:
@@ -43,9 +41,7 @@ def get_create_prompt(messages: str) -> str:
     """
 
 
-def get_suggest_improvements_prompt(messages: str, result: str) -> str:
-    """Get the prompt for suggesting improvements to a prompt."""
-    return f"""
+SUGGEST_IMPROVEMENTS_PROMPT = """
         You're objective is to call the tool create_prompt_tool with the correct parameter. New_prompt.
 
         These are the instructions that the users has provided to generate a prompt.
@@ -62,9 +58,7 @@ def get_suggest_improvements_prompt(messages: str, result: str) -> str:
     """
 
 
-def get_apply_improvements_prompt(formatted_messages: str, improvements: str) -> str:
-    """Get the prompt for applying improvements to create an improved prompt."""
-    return f"""
+APPLY_IMPROVEMENTS_PROMPT = """
     Based on the original user request and the suggested improvements, generate an improved prompt.
 
     Original context and requirements:
