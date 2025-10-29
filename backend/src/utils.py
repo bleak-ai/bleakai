@@ -10,39 +10,109 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import tool
-from langgraph.types import interrupt
+from langgraph.graph import END
+from langgraph.types import Command, interrupt
 
 from state import Question
 
 
 @tool(description="Tool to ask questions to the user.")
-def ask_questions_tool(questions: List[Question]) -> Any:
+def ask_questions_tool(questions: List[Question], last_message: Any) -> Any:
     """"""
+    print("questions", questions)
+    print("last_message", last_message)
 
-    answers = interrupt({"questions": questions})
+    answers_str = interrupt({"questions": questions})
 
-    return json.loads(answers)
+    answers = json.loads(answers_str)
+    user_answers_message = HumanMessage(content=answers)
+
+    print("user_answers_message", user_answers_message)
+
+    questions_with_answers = format_questions_with_answers(
+        last_message, user_answers_message
+    )
+
+    return Command(
+        goto="generate_or_improve_prompt",
+        update={
+            "messages": {
+                "value": [AIMessage(content=questions_with_answers)],
+                "type": "override_last",
+            }
+        },
+    )
 
 
 @tool(description="Tool to create a prompt.")
-def create_prompt_tool(prompt: str) -> Any:
+def create_prompt_tool(prompt: str, last_message: Any) -> Any:
     next_step = interrupt({"prompt": prompt})
 
-    return next_step
+    if next_step == "questions":
+        return Command(
+            goto="clarify_prompt",
+            update={
+                "messages": {
+                    "value": [AIMessage(content="create_prompt_tool called")],
+                    "type": "override_last",
+                },
+                "prompt": prompt,
+            },
+        )
+    elif next_step == "test":
+        return Command(
+            goto="test_prompt",
+            update={
+                "messages": {
+                    "value": [AIMessage(content="create_prompt_tool called")],
+                    "type": "override_last",
+                },
+                "prompt": prompt,
+            },
+        )
 
 
 @tool(description="Tool to test a prompt.")
-def test_prompt_tool(result: str) -> Any:
+def test_prompt_tool(result: str, last_message: Any) -> Any:
     next_step = interrupt({"result": result})
 
-    return next_step
+    if next_step == "analyze":
+        return Command(
+            goto="suggest_improvements",
+            update={
+                "messages": {
+                    "value": [AIMessage(content="test_prompt_tool called")],
+                    "type": "override_last",
+                },
+                "result": result,
+            },
+        )
+    elif next_step == "finish":
+        return Command(
+            goto=END,
+            update={
+                "messages": {
+                    "value": [AIMessage(content="test_prompt_tool called")],
+                    "type": "override_last",
+                },
+                "prompt": result,
+            },
+        )
 
 
 @tool(description="Tool to suggest improvements.")
-def suggest_improvements_tool(improvements: list[str]) -> Any:
-    improvements = interrupt({"improvements": improvements})
+def suggest_improvements_tool(improvements: list[str], last_message: Any) -> Any:
+    improvements_result = interrupt({"improvements": improvements})
+    parsed_improvements = json.loads(improvements_result)
 
-    return json.loads(improvements)
+    if len(parsed_improvements) == 0:
+        return Command(goto="clarify_prompt")
+
+    ai_message = AIMessage(content=parsed_improvements)
+
+    return Command(
+        goto="generate_or_improve_prompt", update={"messages": [ai_message]}
+    )
 
 
 def format_message(message: BaseMessage) -> str:

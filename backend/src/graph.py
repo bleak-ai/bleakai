@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import (
     AIMessage,
-    HumanMessage,
     ToolCall,
 )
 from langgraph.graph import END, START, StateGraph
@@ -20,7 +19,6 @@ from state import GraphState
 from utils import (
     ask_questions_tool,
     create_prompt_tool,
-    format_questions_with_answers,
     get_formatted_messages,
     suggest_improvements_tool,
     test_prompt_tool,
@@ -56,8 +54,6 @@ async def clarify_prompt(
     )
     tools = [ask_questions_tool]
 
-    print("prompt", prompt)
-
     llm_with_tools = llm.bind_tools(tools)
 
     response = llm_with_tools.invoke([("human", prompt)])
@@ -86,88 +82,20 @@ async def tool_supervisor(
         tool_name = tool_call["name"]
 
         if tool_name == "ask_questions_tool":
-            answers = ask_questions_tool.invoke(tool_args)
-            user_answers_message = HumanMessage(content=answers)
-
-            # To have the messages structured in a clear way, we merge
-            # the tool call with the answers from the user
-            questions_with_answers = format_questions_with_answers(
-                last_message, user_answers_message
-            )
-
-            return Command(
-                goto="generate_or_improve_prompt",
-                update={
-                    "messages": {
-                        "value": [AIMessage(content=questions_with_answers)],
-                        "type": "override_last",
-                    }
-                },
+            return ask_questions_tool.invoke(
+                input={"questions": tool_args["questions"], "last_message": last_message}
             )
         elif tool_name == "create_prompt_tool":
-            next_step = create_prompt_tool.invoke(tool_args)
-
-            if next_step == "questions":
-                return Command(
-                    goto="clarify_prompt",
-                    update={
-                        "messages": {
-                            "value": [AIMessage(content="create_prompt_tool called")],
-                            "type": "override_last",
-                        },
-                        "prompt": tool_args["prompt"],
-                    },
-                )
-            elif next_step == "test":
-                return Command(
-                    goto="test_prompt",
-                    update={
-                        "messages": {
-                            "value": [AIMessage(content="create_prompt_tool called")],
-                            "type": "override_last",
-                        },
-                        "prompt": tool_args["prompt"],
-                    },
-                )
-
+            return create_prompt_tool.invoke(
+                input={"prompt": tool_args["prompt"], "last_message": last_message}
+            )
         elif tool_name == "test_prompt_tool":
-            next_step = test_prompt_tool.invoke(tool_args)
-            print("nextstep", next_step)
-
-            if next_step == "analyze":
-                print("analyze")
-                return Command(
-                    goto="suggest_improvements",
-                    update={
-                        "messages": {
-                            "value": [AIMessage(content="test_prompt_tool called")],
-                            "type": "override_last",
-                        },
-                        "result": tool_args["result"],
-                    },
-                )
-            elif next_step == "finish":
-                return Command(
-                    goto=END,
-                    update={
-                        "messages": {
-                            "value": [AIMessage(content="test_prompt_tool called")],
-                            "type": "override_last",
-                        },
-                        "prompt": tool_args,
-                    },
-                )
+            return test_prompt_tool.invoke(
+                input={"result": tool_args["result"], "last_message": last_message}
+            )
         elif tool_name == "suggest_improvements_tool":
-            improvements = suggest_improvements_tool.invoke(tool_args)
-
-            print("improvements", improvements)
-            if len(improvements) == 0:
-                return Command(goto="clarify_prompt")
-
-            ai_message = AIMessage(content=improvements)
-
-            return Command(
-                goto="generate_or_improve_prompt", update={"messages": [ai_message]}
+            return suggest_improvements_tool.invoke(
+                input={"improvements": tool_args["improvements"], "last_message": last_message}
             )
 
 
