@@ -27,7 +27,7 @@ export default function Header() {
           </div>
           <a className="font-bold text-xl" href="/">
             {" "}
-            Prompt Tester
+            Bleak AI
           </a>
         </div>
 

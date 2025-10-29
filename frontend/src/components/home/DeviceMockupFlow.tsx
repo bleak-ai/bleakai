@@ -58,7 +58,7 @@ export function DeviceMockupFlow() {
       )
     },
     {
-      // Step 2: Prompt Tester responds with visual component generation
+      // Step 2: Bleak AI responds with visual component generation
       content: (
         <div className="space-y-3 h-full">
           <div
@@ -298,10 +298,10 @@ export function DeviceMockupFlow() {
       )
     },
     {
-      // Step 4: Prompt Tester generates complete answer (Silent Edge theme)
+      // Step 4: Bleak AI generates complete answer (Silent Edge theme)
       content: (
         <div className="space-y-2 h-full">
-          {/* Prompt Tester Generated Solution */}
+          {/* Bleak AI Generated Solution */}
           <div
             className={`
             transition-all duration-700

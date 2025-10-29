@@ -349,7 +349,7 @@ export const BleakShowcase = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <h4 className="text-lg font-medium text-foreground">
-                Without Prompt Tester
+                Without Bleak AI
               </h4>
             </div>
 
@@ -387,11 +387,11 @@ export const BleakShowcase = () => {
             </div>
           </div>
 
-          {/* Prompt Tester Approach */}
+          {/* Bleak AI Approach */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <h4 className="text-lg font-medium text-foreground">
-                With Prompt Tester
+                With Bleak AI
               </h4>
             </div>
 
