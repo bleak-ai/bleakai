@@ -14,10 +14,6 @@ import {
   CardTitle
 } from "../ui/card";
 
-type Answer = {
-  answer: string;
-};
-
 export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   const sendCommand = useLangGraphSendCommand();
 

@@ -6,11 +6,11 @@ import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
 import {ArrowUp} from "lucide-react";
 import {useState} from "react";
 
-export const TestPromptTool: ToolCallMessagePartComponent = ({argsText}) => {
+export const TestPromptTool: ToolCallMessagePartComponent = ({}) => {
   const sendCommand = useLangGraphSendCommand();
   const [submitted, setSubmitted] = useState(false);
 
-  const result: string = JSON.parse(argsText).result;
+  // const result: string = JSON.parse(argsText).result;
 
   const handleSubmit = (next_step: "analyze" | "finish") => {
     setSubmitted(true);
