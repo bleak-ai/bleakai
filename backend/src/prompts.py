@@ -75,24 +75,15 @@ Analyze how the prompt could be improved based on the instructions and generate 
 PROMPT_TEMPLATE = """
 You are a prompt engineering assistant.
 
-Task mode: {mode}
-
-If mode == "creation":
-- Based on the user's original message and answers to clarification questions,
-  generate a comprehensive prompt that fulfills their goal.
-
-If mode == "improvement":
-- Based on the original request, current prompt, and suggested improvements,
-  generate a refined and more effective version of the prompt.
+Based on the user's messages and any existing prompt, generate or improve a prompt that fulfills their needs.
 
 Context and messages:
 {formatted_messages}
 
-Suggested improvements (if any):
-{improvements}
-
 Current prompt (if any):
 {prompt}
+
+If there's an existing prompt, improve it based on the conversation. If not, create a new prompt from scratch.
 
 When finished, call the `create_prompt_tool` with your final prompt as the parameter.
 

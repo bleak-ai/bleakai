@@ -76,8 +76,18 @@ def test_prompt_tool(result: str, last_message: Any) -> Any:
     feedback = interrupt({"result": result})
 
     human_feedback = HumanMessage(content=feedback)
+    # return Command(
+    #     goto="suggest_improvements",
+    #     update={
+    #         "messages": {
+    #             "value": [human_feedback],
+    #             "type": "override_last",
+    #         },
+    #         "result": result,
+    #     },
+    # )
     return Command(
-        goto="suggest_improvements",
+        goto="generate_or_improve_prompt",
         update={
             "messages": {
                 "value": [human_feedback],

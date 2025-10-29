@@ -114,28 +114,10 @@ async def generate_or_improve_prompt(
 
     formatted_messages = get_formatted_messages(messages)
 
-    # Determine if this is a creation or improvement step
-    is_improvement = current_prompt is not None and len(messages) > 0
-
-    if is_improvement:
-        # Assume last message contains improvement suggestions
-        improvements = messages[-1].content
-        previous_messages = messages[:-1]
-        formatted_previous = get_formatted_messages(previous_messages)
-
-        prompt = PROMPT_TEMPLATE.format(
-            mode="improvement",
-            formatted_messages=formatted_previous,
-            improvements=improvements,
-            prompt=current_prompt,
-        )
-    else:
-        prompt = PROMPT_TEMPLATE.format(
-            mode="creation",
-            formatted_messages=formatted_messages,
-            improvements="",
-            prompt="",
-        )
+    prompt = PROMPT_TEMPLATE.format(
+        formatted_messages=formatted_messages,
+        prompt=current_prompt or "",
+    )
 
     print("###############PROMPT to CREATE PROMPT###############")
     print(prompt)
