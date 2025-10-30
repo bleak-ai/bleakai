@@ -55,23 +55,6 @@ DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new quest
 """
 
 
-SUGGEST_IMPROVEMENTS_PROMPT = """
-You're objective is to call the tool create_prompt_tool with the correct parameter. New_prompt.
-
-These are the instructions that the users has provided to generate a prompt.
-<Instructions>
-{messages}
-</Instructions>
-
-This has been the result of this prompt
-<result>
-{result}
-</result>
-
-Analyze how the prompt could be improved based on the instructions and generate improvements to improve it following the questions by the user.
-"""
-
-
 PROMPT_TEMPLATE = """
 You are a prompt engineering assistant.
 

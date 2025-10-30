@@ -86,8 +86,19 @@ def test_prompt_tool(result: str, last_message: Any) -> Any:
     #         "result": result,
     #     },
     # )
+    # return Command(
+    #     goto="generate_or_improve_prompt",
+    #     update={
+    #         "messages": {
+    #             "value": [human_feedback],
+    #             "type": "override_last",
+    #         },
+    #         "result": result,
+    #     },
+    # )
+
     return Command(
-        goto="generate_or_improve_prompt",
+        goto="autoimprove",
         update={
             "messages": {
                 "value": [human_feedback],

@@ -13,7 +13,6 @@ from langgraph.types import Command
 from prompts import (
     CLARIFY_PROMPT,
     PROMPT_TEMPLATE,
-    SUGGEST_IMPROVEMENTS_PROMPT,
 )
 from state import GraphState
 from utils import (
@@ -37,7 +36,7 @@ async def tool_supervisor(
         "generate_or_improve_prompt",
         "ask_questions_node",
         "test_prompt",
-        "suggest_improvements",
+        "autoimprove",
         "generate_or_improve_prompt",
         "__end__",
     ]
@@ -130,32 +129,59 @@ async def generate_or_improve_prompt(
     return Command(goto="tool_supervisor", update={"messages": [res]})
 
 
-# Based on result and messages, suggest improvements.
-async def suggest_improvements(
+# Analyze prompt improvements based on past messages and current result
+async def autoimprove(
     state: GraphState,
-) -> Command[Literal["tool_supervisor"]]:
-    """Analyze and improve prompt."""
+) -> Command[Literal["generate_or_improve_prompt"]]:
+    """Analyze prompt improvements based on past messages and what has been ignored or not properly applied."""
     messages = state.get("messages", [])
-
     result = state.get("result", "")
+    current_prompt = state.get("prompt", "")
 
     formatted_messages = get_formatted_messages(messages)
 
     print("##############################")
-    print(formatted_messages)
+    print("AUTOIMPROVE ANALYSIS")
+    print("Current prompt:", current_prompt)
+    print("Result:", result)
+    print("Messages:", formatted_messages)
     print("##############################")
 
-    prompt = SUGGEST_IMPROVEMENTS_PROMPT.format(
-        messages=formatted_messages, result=result
-    )
+    # Create a comprehensive analysis prompt that examines:
+    # 1. What user requirements have been ignored
+    # 2. What aspects haven't been properly applied
+    # 3. How the current result falls short of expectations
+    # 4. Specific improvements needed based on conversation history
+    prompt = f"""
+        You are an expert prompt analyst. Analyze the current situation and identify how the prompt can be improved.
+
+        CURRENT PROMPT:
+        {current_prompt}
+
+        CURRENT RESULT:
+        {result}
+
+        CONVERSATION HISTORY:
+        {formatted_messages}
+
+        TASK: Analyze what has been ignored, misunderstood, or not properly applied in the current prompt based on the user's original requirements and conversation history. Look for:
+
+        1. Missing requirements: What specific user requests or constraints are not addressed?
+        2. Misunderstood instructions: Where did the prompt execution deviate from user intent?
+        3. Format issues: Is the output format incorrect or incomplete?
+        4. Context gaps: What important context from the conversation was lost?
+        5. Quality issues: How can the prompt be more precise, clear, or effective?
+
+        Generate specific improvements that address these gaps. Focus on concrete changes that will make the prompt better match the user's actual needs and expectations.
+
+        Call the suggest_improvements_tool with your analysis and specific improvements.
+    """
 
     tools = [suggest_improvements_tool]
-
     llm_with_tools = llm.bind_tools(tools)
-
     res = llm_with_tools.invoke(prompt)
 
-    return Command(goto="tool_supervisor", update={"messages": [res]})
+    return Command(goto="generate_or_improve_prompt", update={"messages": [res]})
 
 
 # Uses just the prompt from the state
@@ -187,7 +213,7 @@ graph_builder = StateGraph(GraphState)  # remove update here, override prompt va
 graph_builder.add_node("ask_questions_node", ask_questions_node)
 graph_builder.add_node("tool_supervisor", tool_supervisor)
 graph_builder.add_node("test_prompt", test_prompt)
-graph_builder.add_node("suggest_improvements", suggest_improvements)
+graph_builder.add_node("autoimprove", autoimprove)
 graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 # graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 
