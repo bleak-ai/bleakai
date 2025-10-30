@@ -108,11 +108,12 @@ async def generate_or_improve_prompt(
 ) -> Command[Literal["tool_supervisor"]]:
     """Create or improve a prompt depending on state."""
     messages = state.get("messages", [])
+    last_message = messages[-1]
     current_prompt = state.get("prompt", None)
 
     formatted_messages = ""
     if current_prompt:
-        formatted_messages = get_formatted_messages(messages)
+        formatted_messages = get_formatted_messages([last_message])
     else:
         # Just the improvements
         tool_call = ToolCall(
