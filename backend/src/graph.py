@@ -30,6 +30,52 @@ llm_model = os.environ["LLM_MODEL"]
 llm = init_chat_model(llm_model)
 
 
+async def generate_or_improve_prompt(
+    state: GraphState,
+) -> Command[Literal["tool_supervisor"]]:
+    """Create or improve a prompt depending on state."""
+    messages = state.get("messages", [])
+
+    print("messages", messages)
+    last_message = messages[-1]
+    current_prompt = state.get("prompt", None)
+
+    formatted_messages = ""
+    if current_prompt:
+        formatted_messages = get_formatted_messages([last_message])
+    else:
+        # HANDLE THE FIRST MESSAGE FROM THE CHAT BY INITIALISING THE PROMPT VARIABLE IN THE STATE
+        tool_call = ToolCall(
+            name="create_prompt_tool",
+            args={"prompt": messages[0]["content"]},
+            id="manual_test_call_1",
+        )
+        ai_message = AIMessage(content="", tool_calls=[tool_call])
+        return Command(
+            goto="tool_supervisor",
+            update={"messages": [ai_message], "prompt": messages[0]["content"]},
+        )
+
+    prompt = PROMPT_TEMPLATE.format(
+        formatted_messages=formatted_messages,
+        prompt=current_prompt or "",
+    )
+
+    print("###############PROMPT to CREATE PROMPT###############")
+    print(prompt)
+    print("##############################")
+
+    tools = [create_prompt_tool]
+    llm_with_tools = llm.bind_tools(tools)
+    res = llm_with_tools.invoke(prompt)
+
+    new_prompt = res.tool_calls[0]["args"]["prompt"]
+
+    return Command(
+        goto="tool_supervisor", update={"messages": [res], "prompt": new_prompt}
+    )
+
+
 async def tool_supervisor(
     state: GraphState,
 ) -> Command[
@@ -114,46 +160,6 @@ async def ask_questions_node(
     response = llm_with_tools.invoke([("human", prompt)])
 
     return Command(goto="tool_supervisor", update={"messages": [response]})
-
-
-async def generate_or_improve_prompt(
-    state: GraphState,
-) -> Command[Literal["tool_supervisor"]]:
-    """Create or improve a prompt depending on state."""
-    messages = state.get("messages", [])
-    last_message = messages[-1]
-    current_prompt = state.get("prompt", None)
-
-    formatted_messages = ""
-    if current_prompt:
-        formatted_messages = get_formatted_messages([last_message])
-    else:
-        # Just the improvements
-        tool_call = ToolCall(
-            name="create_prompt_tool",
-            args={"prompt": messages[0]["content"]},
-            id="manual_test_call_1",
-        )
-        ai_message = AIMessage(content="", tool_calls=[tool_call])
-        return Command(
-            goto="tool_supervisor",
-            update={"messages": [ai_message], "prompt": messages[0]["content"]},
-        )
-
-    prompt = PROMPT_TEMPLATE.format(
-        formatted_messages=formatted_messages,
-        prompt=current_prompt or "",
-    )
-
-    print("###############PROMPT to CREATE PROMPT###############")
-    print(prompt)
-    print("##############################")
-
-    tools = [create_prompt_tool]
-    llm_with_tools = llm.bind_tools(tools)
-    res = llm_with_tools.invoke(prompt)
-
-    return Command(goto="tool_supervisor", update={"messages": [res]})
 
 
 # Analyze prompt improvements based on past messages and current result

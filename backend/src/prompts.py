@@ -57,8 +57,9 @@ Based on the user's messages and any existing prompt, generate or improve a prom
 Context and messages:
 {formatted_messages}
 
-Current prompt (if any):
+<Current prompt>
 {prompt}
+</Current prompt>
 
 If there's an existing prompt, improve it based on the conversation. If not, create a new prompt from scratch.
 

@@ -21,10 +21,9 @@ export const TestPromptTool: ToolCallMessagePartComponent = ({}) => {
 
   return (
     <div className="py-4">
-      <h3 className="text-lg font-medium mb-3">Next Steps</h3>
-
       {!submitted ? (
         <div className="space-y-4">
+          <h3 className="text-lg font-medium mb-3">Next Steps</h3>
           {/* Feedback form always visible */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">

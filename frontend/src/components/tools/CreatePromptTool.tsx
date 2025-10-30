@@ -4,7 +4,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
-import {ArrowRight, Check, Copy} from "lucide-react";
+import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
 
 export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
@@ -56,39 +56,35 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
           </div>
 
           <div className="flex gap-3 w-full pt-4">
-            {!submitted ? (
+            {!submitted && (
               <>
                 <Button
                   onClick={() => handleSubmit("questions")}
                   variant="outline"
-                  className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
+                  className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 gap-2"
                   size="lg"
                 >
+                  <MessageCircle className="h-4 w-4" />
                   Ask Questions
                 </Button>
                 <Button
-                  onClick={() => handleSubmit("test")}
-                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white gap-2"
+                  onClick={() => handleSubmit("evaluate")}
+                  variant="outline"
+                  className="flex-1 bg-gray-200 border-gray-200 text-gray-800 hover:bg-gray-300 gap-2"
                   size="lg"
                 >
-                  Test Prompt
-                  <ArrowRight className="h-4 w-4" />
+                  <BarChart3 className="h-4 w-4" />
+                  Evaluate
                 </Button>
                 <Button
-                  onClick={() => handleSubmit("evaluate")}
-                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white gap-2"
+                  onClick={() => handleSubmit("test")}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white gap-2"
                   size="lg"
                 >
-                  Evaluate Prompt
-                  <ArrowRight className="h-4 w-4" />
+                  <Play className="h-4 w-4" />
+                  Test Prompt
                 </Button>
               </>
-            ) : (
-              <div className="flex items-center justify-center w-full gap-2 py-2">
-                <p className="text-sm text-slate-500 font-medium">
-                  Processing...
-                </p>
-              </div>
             )}
           </div>
         </CardContent>
