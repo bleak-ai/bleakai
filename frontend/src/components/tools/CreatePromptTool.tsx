@@ -64,7 +64,7 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
                   className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
                   size="lg"
                 >
-                  Ask More Questions
+                  Ask Questions
                 </Button>
                 <Button
                   onClick={() => handleSubmit("test")}

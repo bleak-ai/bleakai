@@ -112,9 +112,19 @@ async def generate_or_improve_prompt(
 
     formatted_messages = ""
     if current_prompt:
-        formatted_messages = get_formatted_messages(messages[:-1])
+        formatted_messages = get_formatted_messages(messages)
     else:
-        formatted_messages = get_formatted_messages(messages)  # Just the improvements
+        # Just the improvements
+        tool_call = ToolCall(
+            name="create_prompt_tool",
+            args={"prompt": messages[0]["content"]},
+            id="manual_test_call_1",
+        )
+        ai_message = AIMessage(content="", tool_calls=[tool_call])
+        return Command(
+            goto="tool_supervisor",
+            update={"messages": [ai_message], "prompt": messages[0]["content"]},
+        )
 
     prompt = PROMPT_TEMPLATE.format(
         formatted_messages=formatted_messages,
@@ -221,6 +231,6 @@ graph_builder.add_node("autoimprove", autoimprove)
 graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 # graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 
-graph_builder.add_edge(START, "ask_questions_node")
+graph_builder.add_edge(START, "generate_or_improve_prompt")
 
 graph = graph_builder.compile()
