@@ -302,7 +302,7 @@ function ProductCard({
         <Button
           variant="outline"
           className="w-full bg-transparent"
-          onClick={() => (window.location.href = "/chat")}
+          onClick={() => (window.location.href = previewType === "chatbot" ? "/chat" : "/prompt-tester")}
         >
           Try {title}
           <ArrowRight className="w-4 h-4 ml-2" />
