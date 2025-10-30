@@ -79,12 +79,13 @@ async def ask_questions_node(
     """"""
     print("clarify state")
     messages = state.get("messages", [])
+    prompt = state.get("prompt", messages[0]["content"])
 
     # Extract already asked questions from message history
-    formatted_messages = get_formatted_messages(messages)
+    # formatted_messages = get_formatted_messages(messages)
 
-    print("##############################")
-    print(formatted_messages)
+    print("############ask_questions_node##################")
+    print(prompt)
     print("##############################")
 
     # asked_questions_list = (
@@ -92,9 +93,7 @@ async def ask_questions_node(
     #     if asked_questions
     #     else "No questions asked yet"
     # )
-    prompt = CLARIFY_PROMPT.format(
-        formatted_messages=formatted_messages, asked_questions_list=""
-    )
+    prompt = CLARIFY_PROMPT.format(prompt=prompt)
     tools = [ask_questions_tool]
 
     llm_with_tools = llm.bind_tools(tools)

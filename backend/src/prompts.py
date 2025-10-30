@@ -1,33 +1,32 @@
 CLARIFY_PROMPT = """
 <INSTRUCTIONS>
-Your goal is to call the tool ask_questions_tool with the right parameters.
+    You are a prompt engineering assistant. Your goal is to call the tool 'ask_questions_tool' with the right parameters.
 
-Based on the user message, please do questions to the user that help you define the goal, context and output_format.
+    Based on the user message, generate 2-4 questions (NO MORE) to gather more details about the prompt for better generation.
 
-2 or 3 questions, NO MORE
-
+    DO NOT RETURN ANYTHING ELSE. JUST CALL THE TOOL 'ask_questions_tool' with the questions array.
+    
+    Prefer questions with options.
+    
+    AT LEAST ONE TEXT QUESTION AND AT LEAST ONE RADIO QUESTION
 </INSTRUCTIONS>
 
-<QUESTIONS>
-<GOAL>What the goal of the prompt.</GOAL>
-
-<CONTEXT>The information necessary to generate the prompt</CONTEXT>
-
-<OUTPUT_FORMAT>The output format of the prompt.</OUTPUT_FORMAT>
-</QUESTIONS>
-
 <QUESTION_TYPES>
-There are two types of questions you can generate:
+    <RADIO_QUESTIONS>
+        Use for multiple-choice: Provide 3-5 concise options in an "options" array.
+        Never include "Other".
+        Prefer radio questions over text 
+    </RADIO_QUESTIONS>
 
-<Radio_questions>Radio questions (multiple choice): Use when a set of predefined options can effectively narrow down the user's response. Provide 3-5 concise options in an "options" array. Never include "Other" in options.</Radio_questions>
-
-<Text_questions>Text questions (open-ended): Use when the question requires free-form input to explore details, ideas, or specifics that options can't capture. omit "options".</Text_questions>
+    <TEXT_QUESTIONS>
+        Use for open-ended: Omit "options".
+    </TEXT_QUESTIONS>
 </QUESTION_TYPES>
 
 <TOOL_CALL_INSTRUCTIONS>
-Call the tool with the questions as an array of JSON objects. Choose the question that best suits clarifying the user's needs—add "options" only when necessary for radio questions.
+    Call the tool with an array of JSON objects: {{"id": "qX", "question": "...", "options": [...]}} (options only for radio).
 
-Always use at least 1 question of each type.
+    Mix types to clarify effectively—at least 1 of each if possible.
 </TOOL_CALL_INSTRUCTIONS>
 
 <EXAMPLES>
@@ -37,21 +36,14 @@ Examples:
 {{"id": "q1", "question": "What is your primary goal with this task?", "options": ["Generate a report", "Analyze data", "Create a visualization"]}}
 </For_radio_questions>
 
-<For_open_questions>
+<For_text_questions>
 {{"id": "q1", "question": "What specific challenges are you facing in your current workflow?"}}
-</For_open_questions>
+</For_text_questions>
 </EXAMPLES>
 
-<CONVERSATION_HISTORY>
-{formatted_messages}
-</CONVERSATION_HISTORY>
-
-<IMPORTANT_NOTES>
-IMPORTANT: The following questions have ALREADY been asked. DO NOT repeat them:
-{asked_questions_list}
-Generate a COMPLETELY DIFFERENT question that explores a new aspect of the user's needs.
-DO NOT RETURN ANYTHING. JUST CALL THE TOOL ask_questions_tool with the new question
-</IMPORTANT_NOTES>
+<CURRENT_PROMPT>
+    {prompt}
+</CURRENT_PROMPT>
 """
 
 

@@ -15,7 +15,9 @@ from langgraph.types import Command, interrupt
 from state import Question
 
 
-@tool(description="Tool to ask questions to the user.")
+@tool(
+    description="Tool to ask questions to the user. Arguments: questions: List[Question]"
+)
 def ask_questions_tool(questions: List[Question], last_message: Any) -> Any:
     """"""
     print("questions", questions)
