@@ -23,7 +23,7 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   const handleSubmit = () => {
     setSubmitted(true);
     const formattedAnswers: string[] = questionsWithoutOther.map(
-      (_: QuestionType, index) => answers[index]
+      (_: QuestionType, index) => answers[index] ?? ""
     );
     sendCommand({resume: JSON.stringify(formattedAnswers)});
   };

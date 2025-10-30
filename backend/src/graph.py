@@ -110,7 +110,11 @@ async def generate_or_improve_prompt(
     messages = state.get("messages", [])
     current_prompt = state.get("prompt", None)
 
-    formatted_messages = get_formatted_messages(messages)
+    formatted_messages = ""
+    if current_prompt:
+        formatted_messages = get_formatted_messages(messages[:-1])
+    else:
+        formatted_messages = get_formatted_messages(messages)  # Just the improvements
 
     prompt = PROMPT_TEMPLATE.format(
         formatted_messages=formatted_messages,
@@ -137,13 +141,16 @@ async def autoimprove(
     result = state.get("result", "")
     current_prompt = state.get("prompt", "")
 
-    formatted_messages = get_formatted_messages(messages)
+    # formatted_messages = get_formatted_messages(messages)
+
+    feedback = messages[-1]
 
     print("##############################")
     print("AUTOIMPROVE ANALYSIS")
     print("Current prompt:", current_prompt)
     print("Result:", result)
-    print("Messages:", formatted_messages)
+    # print("Messages:", formatted_messages)
+    print("Feedback:", feedback)
     print("##############################")
 
     # Create a comprehensive analysis prompt that examines:
@@ -154,26 +161,24 @@ async def autoimprove(
     prompt = f"""
         You are an expert prompt analyst. Analyze the current situation and identify how the prompt can be improved.
 
-        CURRENT PROMPT:
+        <PROMPT>
         {current_prompt}
-
-        CURRENT RESULT:
+        </PROMPT>
+        
+        <RESULT>
         {result}
+        </RESULT>
+        
+        <FEEDBACK>
+        {feedback}
+        </FEEDBACK>
 
-        CONVERSATION HISTORY:
-        {formatted_messages}
+        TASK: Analyze what has been ignored, misunderstood, or not properly applied 
+        in the current prompt based on the user's original requirements and feedback. 
 
-        TASK: Analyze what has been ignored, misunderstood, or not properly applied in the current prompt based on the user's original requirements and conversation history. Look for:
+        GENERATE SPECIFIC IMPROVEMENTS FOR THE PROMPT, NOT GENERAL MESSAGES.
 
-        1. Missing requirements: What specific user requests or constraints are not addressed?
-        2. Misunderstood instructions: Where did the prompt execution deviate from user intent?
-        3. Format issues: Is the output format incorrect or incomplete?
-        4. Context gaps: What important context from the conversation was lost?
-        5. Quality issues: How can the prompt be more precise, clear, or effective?
-
-        Generate specific improvements that address these gaps. Focus on concrete changes that will make the prompt better match the user's actual needs and expectations.
-
-        Call the suggest_improvements_tool with your analysis and specific improvements.
+        Call the suggest_improvements_tool with the specific improvements.
     """
 
     tools = [suggest_improvements_tool]
