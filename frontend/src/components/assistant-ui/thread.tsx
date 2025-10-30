@@ -33,6 +33,7 @@ import {LazyMotion, MotionConfig, domAnimation} from "motion/react";
 import * as m from "motion/react-m";
 import {AskQuestionTool} from "../tools/AskQuestionTool";
 import {CreatePromptTool} from "../tools/CreatePromptTool";
+import {EvaluatePromptTool} from "../tools/EvaluatePromptTool";
 import {SuggestImprovementsTool} from "../tools/SuggestImprovementsTool";
 import {TestPromptTool} from "../tools/TestPromptTool";
 
@@ -270,7 +271,8 @@ const AssistantMessage: FC = () => {
                   ask_questions_tool: AskQuestionTool,
                   create_prompt_tool: CreatePromptTool,
                   test_prompt_tool: TestPromptTool,
-                  suggest_improvements_tool: SuggestImprovementsTool
+                  suggest_improvements_tool: SuggestImprovementsTool,
+                  evaluate_prompt_tool: EvaluatePromptTool
                 }
               }
             }}

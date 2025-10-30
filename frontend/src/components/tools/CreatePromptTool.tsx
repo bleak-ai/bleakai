@@ -14,7 +14,7 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
 
   const prompt: string = JSON.parse(argsText).prompt;
 
-  const handleSubmit = (next_step: "questions" | "test") => {
+  const handleSubmit = (next_step: "questions" | "test" | "evaluate") => {
     setSubmitted(true);
     sendCommand({resume: next_step});
   };
@@ -72,6 +72,14 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
                   size="lg"
                 >
                   Test Prompt
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => handleSubmit("evaluate")}
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white gap-2"
+                  size="lg"
+                >
+                  Evaluate Prompt
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </>

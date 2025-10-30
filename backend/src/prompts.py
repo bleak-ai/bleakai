@@ -8,7 +8,9 @@ CLARIFY_PROMPT = """
     
     Prefer questions with options.
     
-    AT LEAST ONE TEXT QUESTION AND AT LEAST ONE RADIO QUESTION
+    AT LEAST ONE TEXT QUESTION AND AT LEAST ONE RADIO QUESTION    
+    
+    {missing_info}
 </INSTRUCTIONS>
 
 <QUESTION_TYPES>

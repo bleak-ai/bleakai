@@ -71,6 +71,17 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
                 "prompt": prompt,
             },
         )
+    elif next_step == "evaluate":
+        return Command(
+            goto="evaluate_prompt_node",
+            update={
+                "messages": {
+                    "value": [AIMessage(content="create_prompt_tool called")],
+                    "type": "override_last",
+                },
+                "prompt": prompt,
+            },
+        )
 
 
 @tool(description="Tool to test a prompt.")
@@ -78,26 +89,6 @@ def test_prompt_tool(result: str, last_message: Any) -> Any:
     feedback = interrupt({"result": result})
 
     human_feedback = HumanMessage(content=feedback)
-    # return Command(
-    #     goto="suggest_improvements",
-    #     update={
-    #         "messages": {
-    #             "value": [human_feedback],
-    #             "type": "override_last",
-    #         },
-    #         "result": result,
-    #     },
-    # )
-    # return Command(
-    #     goto="generate_or_improve_prompt",
-    #     update={
-    #         "messages": {
-    #             "value": [human_feedback],
-    #             "type": "override_last",
-    #         },
-    #         "result": result,
-    #     },
-    # )
 
     return Command(
         goto="autoimprove",
@@ -109,6 +100,33 @@ def test_prompt_tool(result: str, last_message: Any) -> Any:
             "result": result,
         },
     )
+
+
+@tool(
+    description="Tool to evaluate a prompt. Args: evaluation: int (1-6). missing_info: Str (Small description on the info missing)"
+)
+def evaluate_prompt_tool(
+    evaluation: int, missing_info: str, tool_call_message: Any
+) -> Any:
+    next_step = interrupt({"evaluation": evaluation, "missing_info": missing_info})
+
+    if next_step == "questions":
+        return Command(
+            goto="ask_questions_node",
+            update={
+                "messages": {
+                    "value": [tool_call_message],
+                    "type": "override_last",
+                }
+            },
+        )
+    elif next_step == "test":
+        return Command(
+            goto="test_prompt",
+            update={
+                "messages": [AIMessage(content=f"Missing info {missing_info}")],
+            },
+        )
 
 
 @tool(description="Tool to suggest improvements.")
