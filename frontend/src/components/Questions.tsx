@@ -109,7 +109,7 @@ export default function Questions({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={questions[0].question.substring(0, 5)}>
       <div className="text-2xl font-bold">Answer this Questions: </div>
       {questions.map((question, index) => (
         <div key={index} className="space-y-2">
