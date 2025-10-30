@@ -63,7 +63,7 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
             <div className="mb-4">
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-500 via-blue-500 to-emerald-500 rounded-full transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-orange-500 via-yellow-500 to-emerald-500 rounded-full transition-all duration-300"
                   style={{width: `${percentage}%`}}
                 />
               </div>
@@ -72,7 +72,7 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
             {/* Missing Info */}
             {missingInfo && completionLevel < 6 && (
               <div className="text-sm text-muted-foreground leading-relaxed">
-                <p className="font-medium mb-1">Add:</p>
+                <p className="font-medium mb-1">How to Improve:</p>
                 <p>{missingInfo}</p>
               </div>
             )}
