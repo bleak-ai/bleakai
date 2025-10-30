@@ -170,26 +170,32 @@ async def autoimprove(
     # 3. How the current result falls short of expectations
     # 4. Specific improvements needed based on conversation history
     prompt = f"""
-        You are an expert prompt analyst. Analyze the current situation and identify how the prompt can be improved.
+        You are an expert prompt analyst. Focus ONLY on addressing the specific user feedback and clear gaps between the prompt and result.
 
         <PROMPT>
         {current_prompt}
         </PROMPT>
-        
+
         <RESULT>
         {result}
         </RESULT>
-        
+
         <FEEDBACK>
         {feedback}
         </FEEDBACK>
 
-        TASK: Analyze what has been ignored, misunderstood, or not properly applied 
-        in the current prompt based on the user's original requirements and feedback. 
+        TASK: Identify improvements that directly address:
+        1. Specific issues mentioned in the user's feedback
+        2. Clear discrepancies between what the prompt asks for and what the result delivers
+        3. Missing instructions that would prevent the issues seen in the result
 
-        GENERATE SPECIFIC IMPROVEMENTS FOR THE PROMPT, NOT GENERAL MESSAGES.
+        CONSTRAINTS:
+        - Maximum 2-3 specific improvements
+        - Each improvement must directly relate to the feedback or obvious prompt-result gaps
+        - Avoid general improvements unless the feedback explicitly mentions them
+        - Focus on actionable changes that will prevent the current issues
 
-        Call the suggest_improvements_tool with the specific improvements.
+        Call the suggest_improvements_tool with ONLY the most relevant, specific improvements.
     """
 
     tools = [suggest_improvements_tool]
