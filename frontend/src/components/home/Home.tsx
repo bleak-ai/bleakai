@@ -2,10 +2,9 @@
 
 import {Button} from "@/components/ui/button";
 import {ArrowRight, Check, Zap} from "lucide-react";
-import {useState} from "react";
 
 export default function Home() {
-  const [selectedPlan, setSelectedPlan] = useState("freemium");
+  // const [selectedPlan, setSelectedPlan] = useState("freemium");
 
   return (
     <div className="bg-background text-foreground">
@@ -313,81 +312,81 @@ function ProductCard({
   );
 }
 
-function PricingCard({
-  name,
-  price,
-  period,
-  description,
-  features,
-  isSelected,
-  onSelect,
-  cta,
-  ctaVariant,
-  highlighted
-}: {
-  name: string;
-  price: string;
-  period?: string;
-  description: string;
-  features: string[];
-  isSelected: boolean;
-  onSelect: () => void;
-  cta: string;
-  ctaVariant: "default" | "outline";
-  highlighted?: boolean;
-}) {
-  return (
-    <div
-      className={`relative rounded-lg border transition-all cursor-pointer ${
-        highlighted
-          ? "border-primary bg-primary/5 shadow-lg scale-105 md:scale-100"
-          : "border-border bg-card hover:border-primary/50"
-      }`}
-      onClick={onSelect}
-    >
-      {highlighted && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
-          Most Popular
-        </div>
-      )}
+// function PricingCard({
+//   name,
+//   price,
+//   period,
+//   description,
+//   features,
+//   // isSelected,
+//   onSelect,
+//   cta,
+//   ctaVariant,
+//   highlighted
+// }: {
+//   name: string;
+//   price: string;
+//   period?: string;
+//   description: string;
+//   features: string[];
+//   isSelected: boolean;
+//   onSelect: () => void;
+//   cta: string;
+//   ctaVariant: "default" | "outline";
+//   highlighted?: boolean;
+// }) {
+//   return (
+//     <div
+//       className={`relative rounded-lg border transition-all cursor-pointer ${
+//         highlighted
+//           ? "border-primary bg-primary/5 shadow-lg scale-105 md:scale-100"
+//           : "border-border bg-card hover:border-primary/50"
+//       }`}
+//       onClick={onSelect}
+//     >
+//       {highlighted && (
+//         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
+//           Most Popular
+//         </div>
+//       )}
 
-      <div className="p-8 space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h3 className="text-2xl font-semibold">{name}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
+//       <div className="p-8 space-y-6">
+//         {/* Header */}
+//         <div className="space-y-2">
+//           <h3 className="text-2xl font-semibold">{name}</h3>
+//           <p className="text-sm text-muted-foreground">{description}</p>
+//         </div>
 
-        {/* Price */}
-        <div className="space-y-1">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-light">{price}</span>
-            {period && (
-              <span className="text-muted-foreground text-sm">{period}</span>
-            )}
-          </div>
-        </div>
+//         {/* Price */}
+//         <div className="space-y-1">
+//           <div className="flex items-baseline gap-1">
+//             <span className="text-4xl font-light">{price}</span>
+//             {period && (
+//               <span className="text-muted-foreground text-sm">{period}</span>
+//             )}
+//           </div>
+//         </div>
 
-        {/* Features */}
-        <ul className="space-y-3">
-          {features.map((feature) => (
-            <li key={feature} className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <span className="text-sm text-foreground">{feature}</span>
-            </li>
-          ))}
-        </ul>
+//         {/* Features */}
+//         <ul className="space-y-3">
+//           {features.map((feature) => (
+//             <li key={feature} className="flex items-start gap-3">
+//               <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+//               <span className="text-sm text-foreground">{feature}</span>
+//             </li>
+//           ))}
+//         </ul>
 
-        {/* CTA */}
-        <Button
-          variant={ctaVariant}
-          className="w-full"
-          onClick={() => (window.location.href = "/chat")}
-        >
-          {cta}
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
-    </div>
-  );
-}
+//         {/* CTA */}
+//         <Button
+//           variant={ctaVariant}
+//           className="w-full"
+//           onClick={() => (window.location.href = "/chat")}
+//         >
+//           {cta}
+//           <ArrowRight className="w-4 h-4 ml-2" />
+//         </Button>
+//       </div>
+//     </div>
+//   );
+// }
