@@ -123,9 +123,6 @@ def evaluate_prompt_tool(
     elif next_step == "test":
         return Command(
             goto="test_prompt",
-            update={
-                "messages": [AIMessage(content=f"Missing info {missing_info}")],
-            },
         )
 
 
