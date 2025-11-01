@@ -22,6 +22,11 @@ app.add_middleware(
 async def stream_updates(request: Request):
     """Stream LangGraph updates as NDJSON."""
     body = await request.json()
+
+    # Get thread_id from request or use default
+    thread_id = body.get("thread_id", "1")
+    config = {"configurable": {"thread_id": thread_id}}
+
     input_data = body.get("input", {})
     if not isinstance(input_data, dict) or "input" not in input_data:
         raise HTTPException(status_code=400, detail="Invalid input structure")
@@ -30,11 +35,11 @@ async def stream_updates(request: Request):
     print("message", message)
 
     async def event_generator():
-        # Optional: Yield a start marker if needed (e.g., for framing)
-        # yield json.dumps({"type": "start"}) + "\n"
         updates = []
         async for update in graph.astream(
-            {"messages": [message]}, stream_mode="updates"
+            {"messages": [message]},  # input
+            config,  # pass config here with thread_id
+            stream_mode="updates",
         ):
             updates.append(dumpd(update))
 

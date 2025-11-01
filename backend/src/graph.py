@@ -7,6 +7,7 @@ from langchain_core.messages import (
     AIMessage,
     ToolCall,
 )
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import START, StateGraph
 from langgraph.types import Command
 from src.prompts import (
@@ -307,4 +308,5 @@ graph_builder.add_node("generate_or_improve_prompt", generate_or_improve_prompt)
 
 graph_builder.add_edge(START, "generate_or_improve_prompt")
 
-graph = graph_builder.compile()
+checkpointer = InMemorySaver()
+graph = graph_builder.compile(checkpointer=checkpointer)

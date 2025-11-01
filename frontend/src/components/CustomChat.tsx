@@ -8,6 +8,7 @@ export default function CustomChat() {
   const [message, setMessage] = useState("");
   const [output, setOutput] = useState<React.ReactNode[]>([]); // store React elements, not strings
   const [isLoading, setIsLoading] = useState(false);
+  const [threadId] = useState(() => `thread_${Date.now()}`);
 
   async function send() {
     if (!message.trim()) return;
@@ -19,7 +20,10 @@ export default function CustomChat() {
       const res = await fetch("http://localhost:8000/stream", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({input: {input: message}})
+        body: JSON.stringify({
+          input: {input: message},
+          thread_id: threadId
+        })
       });
 
       const reader = res.body?.getReader();
