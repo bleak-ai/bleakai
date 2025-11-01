@@ -13,6 +13,7 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
   const sendCommand = useLangGraphSendCommand();
   const [submitted, setSubmitted] = useState(false);
 
+  console.log("evaluate argsText", argsText);
   const completionLevel = parseInt(JSON.parse(argsText).evaluation);
   const missingInfo = JSON.parse(argsText).missing_info;
 
