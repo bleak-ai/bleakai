@@ -1,11 +1,10 @@
 /**
- * StreamProcessingService - Centralized service for processing LangGraph stream responses
+ * StreamProcessingService - Minimal service for processing LangGraph stream responses
  *
  * This service handles:
  * - Response parsing and validation
- * - Error handling and recovery
+ * - Basic error handling
  * - Response transformation
- * - Centralized logging
  */
 
 export interface ProcessedResponse {
@@ -24,56 +23,17 @@ export interface ProcessedError {
   recoverable: boolean;
 }
 
-export interface StreamProcessor {
-  processResponse(chunk: string): ProcessedResponse[];
-  validateResponse(response: any): boolean;
-  handleError(error: Error): ProcessedError;
-  transformResponse(response: any): ProcessedResponse;
-}
-
-export interface ToolCall {
-  name: string;
-  args: any;
-}
-
-export interface StreamProcessingConfig {
-  enableLogging?: boolean;
-  maxRetries?: number;
-  retryDelay?: number;
-  strictValidation?: boolean;
-}
-
-/**
- * Default configuration for stream processing
- */
-const DEFAULT_CONFIG: Required<StreamProcessingConfig> = {
-  enableLogging: true,
-  maxRetries: 3,
-  retryDelay: 1000,
-  strictValidation: false
-};
-
 /**
  * StreamProcessingService class
  */
-export class StreamProcessingService implements StreamProcessor {
-  private config: Required<StreamProcessingConfig>;
-  private errorHandlers: Map<string, (error: ProcessedError) => void> =
-    new Map();
-  private responseHandlers: Map<string, (response: ProcessedResponse) => void> =
-    new Map();
-
-  constructor(config: StreamProcessingConfig = {}) {
-    this.config = {...DEFAULT_CONFIG, ...config};
-  }
+export class StreamProcessingService {
+  constructor() {}
 
   /**
    * Process a raw chunk from the stream and return processed responses
    */
   processResponse(chunk: string): ProcessedResponse[] {
     try {
-      this.log("Processing chunk:", chunk);
-
       // Try to parse JSON
       const jsonData = JSON.parse(chunk);
 
@@ -85,14 +45,12 @@ export class StreamProcessingService implements StreamProcessor {
         const processed = this.transformResponse(response);
         if (processed) {
           processedResponses.push(processed);
-          this.notifyResponseHandlers(processed);
         }
       }
 
       return processedResponses;
     } catch (error) {
       const processedError = this.handleError(error as Error);
-      this.notifyErrorHandlers(processedError);
       return [{type: "error", error: processedError}];
     }
   }
@@ -113,8 +71,6 @@ export class StreamProcessingService implements StreamProcessor {
    * Handle and categorize errors
    */
   handleError(error: Error): ProcessedError {
-    this.log("Handling error:", error);
-
     // Categorize error type
     let errorType: ProcessedError["type"] = "unknown_error";
     let recoverable = false;
@@ -140,7 +96,6 @@ export class StreamProcessingService implements StreamProcessor {
       recoverable
     };
 
-    this.log("Processed error:", processedError);
     return processedError;
   }
 
@@ -158,7 +113,6 @@ export class StreamProcessingService implements StreamProcessor {
 
     try {
       const key = Object.keys(response)[0];
-      this.log("Processing response key:", key);
 
       // Extract tool calls from the response
       const toolCalls = this.extractToolCalls(response[key]);
@@ -192,13 +146,11 @@ export class StreamProcessingService implements StreamProcessor {
   /**
    * Extract tool calls from a response object
    */
-  private extractToolCalls(responseData: any): ToolCall[] {
+  private extractToolCalls(responseData: any): any[] {
     try {
-      const toolCalls: ToolCall[] = [];
-      console.log("responsedata ", responseData);
+      const toolCalls: any[] = [];
       // Handle different message formats
       const messages = responseData?.messages || [];
-      console.log("messages", messages);
 
       for (const message of messages) {
         // Check for tool calls in different possible locations
@@ -214,106 +166,18 @@ export class StreamProcessingService implements StreamProcessor {
         }
       }
 
-      this.log("Extracted tool calls:", toolCalls);
       return toolCalls;
     } catch (error) {
       console.error("Error extracting tool calls:", error);
       return [];
     }
   }
-
-  /**
-   * Register an error handler for specific error types
-   */
-  registerErrorHandler(
-    errorType: string,
-    handler: (error: ProcessedError) => void
-  ): () => void {
-    this.errorHandlers.set(errorType, handler);
-
-    // Return unsubscribe function
-    return () => {
-      this.errorHandlers.delete(errorType);
-    };
-  }
-
-  /**
-   * Register a response handler for specific response types
-   */
-  registerResponseHandler(
-    responseType: string,
-    handler: (response: ProcessedResponse) => void
-  ): () => void {
-    this.responseHandlers.set(responseType, handler);
-
-    // Return unsubscribe function
-    return () => {
-      this.responseHandlers.delete(responseType);
-    };
-  }
-
-  /**
-   * Notify registered error handlers
-   */
-  private notifyErrorHandlers(error: ProcessedError): void {
-    const handler = this.errorHandlers.get(error.type);
-    if (handler) {
-      try {
-        handler(error);
-      } catch (handlerError) {
-        this.log("Error in error handler:", handlerError);
-      }
-    }
-  }
-
-  /**
-   * Notify registered response handlers
-   */
-  private notifyResponseHandlers(response: ProcessedResponse): void {
-    const handler = this.responseHandlers.get(response.type);
-    if (handler) {
-      try {
-        handler(response);
-      } catch (handlerError) {
-        this.log("Error in response handler:", handlerError);
-      }
-    }
-  }
-
-  /**
-   * Logging utility
-   */
-  private log(...args: any[]): void {
-    if (this.config.enableLogging) {
-      console.log("[StreamProcessingService]", ...args);
-    }
-  }
-
-  /**
-   * Update configuration
-   */
-  updateConfig(newConfig: Partial<StreamProcessingConfig>): void {
-    this.config = {...this.config, ...newConfig};
-    this.log("Updated config:", this.config);
-  }
-
-  /**
-   * Get current configuration
-   */
-  getConfig(): Required<StreamProcessingConfig> {
-    return {...this.config};
-  }
 }
 
 /**
  * Create a default instance of the stream processing service
  */
-export const defaultStreamProcessor = new StreamProcessingService({
-  enableLogging: true,
-  maxRetries: 3,
-  retryDelay: 1000,
-  strictValidation: false
-});
+export const defaultStreamProcessor = new StreamProcessingService();
 
 /**
  * Utility functions for common stream processing operations
