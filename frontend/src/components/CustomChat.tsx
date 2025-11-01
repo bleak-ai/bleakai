@@ -8,6 +8,7 @@ import {
   type StreamingCallbacks,
   type StreamRequest
 } from "@/utils/api";
+import {helloWorld} from "bleakai";
 import {createContext, useContext, useEffect, useState} from "react";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
 import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
@@ -31,6 +32,7 @@ export const useStreaming = () => {
 };
 
 export default function CustomChat() {
+  helloWorld();
   const [message, setMessage] = useState("");
   const [output, setOutput] = useState<React.ReactNode[]>([]); // store React elements, not strings
   const [isLoading, setIsLoading] = useState(false);
