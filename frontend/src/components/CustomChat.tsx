@@ -17,7 +17,6 @@ import {
   type AdvancedStreamCallbacks,
   type StreamRequest
 } from "@/utils/api";
-import {helloWorld} from "bleakai";
 import {createContext, useContext, useEffect, useState} from "react";
 import {AskQuestionTool} from "./customtools/AskQuestionTool";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
@@ -47,7 +46,6 @@ export const useStreaming = () => {
 };
 
 export default function CustomChat() {
-  helloWorld();
   const [message, setMessage] = useState("");
   const [output, setOutput] = useState<React.ReactNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,8 +89,6 @@ export default function CustomChat() {
 
   // Process validated responses and render appropriate components
   const handleProcessedResponse = (response: ProcessedResponse) => {
-    console.log("Processing validated response:", response);
-
     if (streamUtils.isToolCall(response)) {
       const toolComponent = defaultToolRegistry.getToolComponent(
         response.toolName
@@ -127,7 +123,6 @@ export default function CustomChat() {
 
   // Handle validation errors
   const handleValidationError = (error: any) => {
-    console.error("Validation error:", error);
     const errorComponent = (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <h3 className="text-red-800 font-semibold">Stream Processing Error</h3>
@@ -138,19 +133,6 @@ export default function CustomChat() {
       </div>
     );
     setOutput((prev) => [...prev, errorComponent]);
-  };
-
-  // Handle retry attempts
-  const handleRetry = (attempt: number, maxAttempts: number) => {
-    console.log(`Retrying stream request... Attempt ${attempt}/${maxAttempts}`);
-    const retryComponent = (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-yellow-600 text-sm">
-          Retrying... Attempt {attempt} of {maxAttempts}
-        </p>
-      </div>
-    );
-    setOutput((prev) => [...prev, retryComponent]);
   };
 
   // Centralized streaming request wrapper using simplified API
@@ -176,10 +158,6 @@ export default function CustomChat() {
             handleValidationError(response.error);
           }
         }
-      },
-      onRetry: (attempt: number, maxAttempts: number) => {
-        handleRetry(attempt, maxAttempts);
-        callbacks.onRetry?.(attempt, maxAttempts);
       }
     };
 
