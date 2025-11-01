@@ -2,76 +2,24 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import {sendStreamRequest} from "@/utils/api";
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
-import {useStreaming as useStreamingContext} from "../CustomChat";
+import type {CustomToolProps} from "./shared";
+import {useToolCommand} from "./shared";
 
-// Hook to use streaming context with fallback
-const useStreaming = () => {
-  try {
-    return useStreamingContext();
-  } catch (error) {
-    console.warn(
-      "useStreaming must be used within a StreamingProvider, falling back to direct request"
-    );
-    return {handleStreamRequest: null};
-  }
-};
-
-export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
-  argsText
-}) => {
+export const EvaluatePromptTool = ({argsText}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
-  const {handleStreamRequest} = useStreaming();
+  const {sendCommand} = useToolCommand();
 
-  console.log("evaluate argsText", argsText);
   const completionLevel = parseInt(JSON.parse(argsText).evaluation);
   const missingInfo = JSON.parse(argsText).missing_info;
 
   const handleSubmit = async (next_step: "questions" | "test") => {
+    if (submitted) return;
+
     setSubmitted(true);
 
-    console.log("EvaluatePromptTool argsText", argsText);
-
-    if (handleStreamRequest) {
-      // Use the centralized streaming handler from context
-      await handleStreamRequest(
-        {
-          input: {input: ""},
-          command: {
-            resume: next_step
-          }
-        },
-        {
-          onStart: () =>
-            console.log("EvaluatePromptTool: Starting streaming request..."),
-          onResponse: (chunk) => {
-            console.log("EvaluatePromptTool response chunk:", chunk);
-            // Response is handled by parent component via context
-          },
-          onComplete: () =>
-            console.log("EvaluatePromptTool: Streaming request completed"),
-          onError: (error) =>
-            console.error("EvaluatePromptTool: Streaming request error:", error)
-        }
-      );
-    } else {
-      // Fallback to direct request if no context provider available
-      console.warn("No streaming context available - using fallback");
-      await sendStreamRequest(
-        {
-          input: {input: ""},
-          command: {
-            resume: next_step
-          }
-        },
-        (chunk) => {
-          console.log("EvaluatePromptTool response chunk (fallback):", chunk);
-        }
-      );
-    }
+    await sendCommand(next_step);
   };
 
   const percentage = (completionLevel / 6) * 100;
@@ -92,12 +40,9 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
   const StatusIcon = status.icon;
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <Card className="border-0 bg-white shadow-sm overflow-hidden">
-        {/* <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
-          Prompt
-        </CardHeader> */}
-        <CardContent className="space-y-2 px-8 pb-2">
+    <div className="custom-tool-root">
+      <Card className="custom-tool-card">
+        <CardContent className="custom-tool-content">
           <div className="w-full  mx-auto p-6 bg-card rounded-lg border border-border">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">

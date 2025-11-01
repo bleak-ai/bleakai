@@ -2,30 +2,36 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {
-  createNewThread,
-  getCurrentThreadId,
-  sendValidatedStreamRequest,
-  type EnhancedStreamingCallbacks,
-  type StreamRequest
-} from "@/utils/api";
-import {helloWorld} from "bleakai";
-import {createContext, useContext, useEffect, useState} from "react";
-import {CreatePromptTool} from "./customtools/CreatePromptTool";
-import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
-import {
-  type ProcessedResponse,
   defaultStreamProcessor,
-  streamUtils
+  streamUtils,
+  type ProcessedResponse
 } from "@/services/StreamProcessingService";
 import {
   defaultToolRegistry,
   toolRegistryUtils
 } from "@/services/ToolRegistryService";
+import {
+  createNewThread,
+  getCurrentThreadId,
+  sendStreamRequestWithRetry,
+  type AdvancedStreamCallbacks,
+  type StreamRequest
+} from "@/utils/api";
+import {helloWorld} from "bleakai";
+import {createContext, useContext, useEffect, useState} from "react";
+import {AskQuestionTool} from "./customtools/AskQuestionTool";
+import {CreatePromptTool} from "./customtools/CreatePromptTool";
+import {SuggestImprovementsTool} from "./customtools/SuggestImprovementsTool";
+import {TestPromptTool} from "./customtools/TestPromptTool";
+import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
 
 // Context to provide streaming callback to tools
 export const StreamingContext = createContext<{
   handleStreamRequest:
-    | ((request: StreamRequest, callbacks: EnhancedStreamingCallbacks) => Promise<void>)
+    | ((
+        request: StreamRequest,
+        callbacks: AdvancedStreamCallbacks
+      ) => Promise<void>)
     | null;
 }>({
   handleStreamRequest: null
@@ -71,7 +77,13 @@ export default function CustomChat() {
       toolRegistryUtils.createToolConfig(
         "evaluate_prompt_node",
         EvaluatePromptTool
-      )
+      ),
+      toolRegistryUtils.createToolConfig("test_prompt", TestPromptTool),
+      toolRegistryUtils.createToolConfig(
+        "autoimprove",
+        SuggestImprovementsTool
+      ),
+      toolRegistryUtils.createToolConfig("ask_questions_node", AskQuestionTool)
     ];
 
     toolRegistryUtils.registerTools(tools);
@@ -82,7 +94,9 @@ export default function CustomChat() {
     console.log("Processing validated response:", response);
 
     if (streamUtils.isToolCall(response)) {
-      const toolComponent = defaultToolRegistry.getToolComponent(response.toolName);
+      const toolComponent = defaultToolRegistry.getToolComponent(
+        response.toolName
+      );
 
       if (toolComponent) {
         // Record tool usage
@@ -118,7 +132,8 @@ export default function CustomChat() {
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <h3 className="text-red-800 font-semibold">Stream Processing Error</h3>
         <p className="text-red-600 text-sm">
-          {error?.message || "An unknown error occurred while processing the stream"}
+          {error?.message ||
+            "An unknown error occurred while processing the stream"}
         </p>
       </div>
     );
@@ -138,25 +153,39 @@ export default function CustomChat() {
     setOutput((prev) => [...prev, retryComponent]);
   };
 
-  // Centralized streaming request wrapper using new services
+  // Centralized streaming request wrapper using simplified API
   const handleStreamingRequest = async (
     request: StreamRequest,
-    callbacks: EnhancedStreamingCallbacks
+    callbacks: AdvancedStreamCallbacks
   ) => {
     setIsLoading(true);
 
-    const enhancedCallbacks: EnhancedStreamingCallbacks = {
+    const enhancedCallbacks: AdvancedStreamCallbacks = {
       ...callbacks,
-      onProcessedResponse: handleProcessedResponse,
-      onValidationError: handleValidationError,
-      onRetry: handleRetry
+      onResponse: (chunk: string) => {
+        // Handle the raw response chunk
+        callbacks.onResponse?.(chunk);
+
+        // Process the chunk for tool calls and other events
+        const processedResponses =
+          defaultStreamProcessor.processResponse(chunk);
+        for (const response of processedResponses) {
+          if (streamUtils.isToolCall(response)) {
+            handleProcessedResponse(response);
+          } else if (streamUtils.isError(response)) {
+            handleValidationError(response.error);
+          }
+        }
+      },
+      onRetry: (attempt: number, maxAttempts: number) => {
+        handleRetry(attempt, maxAttempts);
+        callbacks.onRetry?.(attempt, maxAttempts);
+      }
     };
 
-    await sendValidatedStreamRequest(request, enhancedCallbacks, {
-      enableValidation: true,
+    await sendStreamRequestWithRetry(request, enhancedCallbacks, {
       maxRetries: 3,
-      retryDelay: 1000,
-      processor: defaultStreamProcessor
+      retryDelay: 1000
     });
 
     setIsLoading(false);

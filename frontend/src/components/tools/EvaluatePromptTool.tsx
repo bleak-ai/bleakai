@@ -3,8 +3,8 @@
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {
-  sendValidatedStreamRequest,
-  type EnhancedStreamingCallbacks
+  sendStreamRequestWithRetry,
+  type AdvancedStreamCallbacks
 } from "@/utils/api";
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
@@ -53,16 +53,19 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
 
     console.log("EvaluatePromptTool: Submitting request for step:", next_step);
 
-    const callbacks: EnhancedStreamingCallbacks = {
+    const callbacks: AdvancedStreamCallbacks = {
       onStart: () => {
         console.log("EvaluatePromptTool: Starting streaming request...");
       },
       onResponse: (chunk: string) => {
         console.log("EvaluatePromptTool: Raw response chunk:", chunk);
-      },
-      onProcessedResponse: (response) => {
-        console.log("EvaluatePromptTool: Processed response:", response);
-        // Response is handled by parent component via context
+
+        // Process the chunk for tool calls and other events
+        const processedResponses = defaultStreamProcessor.processResponse(chunk);
+        for (const response of processedResponses) {
+          console.log("EvaluatePromptTool: Processed response:", response);
+          // Response is handled by parent component via context
+        }
       },
       onComplete: () => {
         console.log("EvaluatePromptTool: Streaming request completed");
@@ -70,11 +73,6 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
       },
       onError: (error: Error) => {
         console.error("EvaluatePromptTool: Streaming request error:", error);
-        setIsLoading(false);
-        setSubmitted(false); // Allow retry on error
-      },
-      onValidationError: (error) => {
-        console.error("EvaluatePromptTool: Validation error:", error);
         setIsLoading(false);
         setSubmitted(false); // Allow retry on error
       },
@@ -96,9 +94,9 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
           callbacks
         );
       } else {
-        // Fallback to direct validated request if no context provider available
+        // Fallback to direct request with retries if no context provider available
         console.warn("EvaluatePromptTool: No streaming context available - using fallback");
-        await sendValidatedStreamRequest(
+        await sendStreamRequestWithRetry(
           {
             input: {input: ""},
             command: {
@@ -107,10 +105,8 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
           },
           callbacks,
           {
-            enableValidation: true,
             maxRetries: 3,
-            retryDelay: 1000,
-            processor: defaultStreamProcessor
+            retryDelay: 1000
           }
         );
       }

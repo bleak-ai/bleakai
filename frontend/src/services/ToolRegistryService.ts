@@ -6,7 +6,7 @@
  * - Component retrieval
  */
 
-import React from 'react';
+import React from "react";
 
 export interface ToolConfig {
   name: string;
@@ -30,11 +30,10 @@ export class ToolRegistryService implements ToolRegistry {
    */
   registerTool(toolConfig: ToolConfig): void {
     if (!toolConfig.name || !toolConfig.component) {
-      throw new Error('Tool registration requires both name and component');
+      throw new Error("Tool registration requires both name and component");
     }
 
     this.tools.set(toolConfig.name, toolConfig);
-    console.log(`[ToolRegistry] Registered tool: ${toolConfig.name}`);
   }
 
   /**
@@ -65,12 +64,18 @@ export const toolRegistryUtils = {
   /**
    * Register multiple tools at once
    */
-  registerTools(toolConfigs: ToolConfig[], registry: ToolRegistry = defaultToolRegistry): void {
-    toolConfigs.forEach(config => {
+  registerTools(
+    toolConfigs: ToolConfig[],
+    registry: ToolRegistry = defaultToolRegistry
+  ): void {
+    toolConfigs.forEach((config) => {
       try {
         registry.registerTool(config);
       } catch (error) {
-        console.error(`[ToolRegistry] Failed to register tool ${config.name}:`, error);
+        console.error(
+          `[ToolRegistry] Failed to register tool ${config.name}:`,
+          error
+        );
       }
     });
   },

@@ -2,120 +2,24 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import {
-  sendValidatedStreamRequest,
-  type EnhancedStreamingCallbacks
-} from "@/utils/api";
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
-import {useStreaming as useStreamingContext} from "../CustomChat";
-import {
-  defaultStreamProcessor,
-  streamUtils
-} from "@/services/StreamProcessingService";
+import type {CustomToolProps} from "./shared";
+import {useToolCommand} from "./shared";
 
-// Standardized streaming hook for all tools
-const useStandardStreaming = () => {
-  try {
-    const {handleStreamRequest} = useStreamingContext();
-    return {
-      handleStreamRequest,
-      isContextAvailable: true
-    };
-  } catch (error) {
-    console.warn(
-      "useStreaming must be used within a StreamingProvider, falling back to direct request"
-    );
-    return {
-      handleStreamRequest: null,
-      isContextAvailable: false
-    };
-  }
-};
-
-export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
+export const CreatePromptTool = ({argsText}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const {handleStreamRequest, isContextAvailable} = useStandardStreaming();
+  const {sendCommand, isLoading} = useToolCommand();
 
   const prompt: string = JSON.parse(argsText).prompt;
 
   const handleSubmit = async (next_step: "questions" | "test" | "evaluate") => {
-    if (submitted || isLoading) return;
+    if (submitted) return;
 
     setSubmitted(true);
-    setIsLoading(true);
 
-    console.log("CreatePromptTool: Submitting request for step:", next_step);
-
-    const callbacks: EnhancedStreamingCallbacks = {
-      onStart: () => {
-        console.log("CreatePromptTool: Starting streaming request...");
-      },
-      onResponse: (chunk: string) => {
-        console.log("CreatePromptTool: Raw response chunk:", chunk);
-      },
-      onProcessedResponse: (response) => {
-        console.log("CreatePromptTool: Processed response:", response);
-        // Response is handled by parent component via context
-      },
-      onComplete: () => {
-        console.log("CreatePromptTool: Streaming request completed");
-        setIsLoading(false);
-      },
-      onError: (error: Error) => {
-        console.error("CreatePromptTool: Streaming request error:", error);
-        setIsLoading(false);
-        setSubmitted(false); // Allow retry on error
-      },
-      onValidationError: (error) => {
-        console.error("CreatePromptTool: Validation error:", error);
-        setIsLoading(false);
-        setSubmitted(false); // Allow retry on error
-      },
-      onRetry: (attempt: number, maxAttempts: number) => {
-        console.log(`CreatePromptTool: Retry ${attempt}/${maxAttempts}`);
-      }
-    };
-
-    try {
-      if (handleStreamRequest && isContextAvailable) {
-        // Use the centralized streaming handler from context
-        await handleStreamRequest(
-          {
-            input: {input: ""},
-            command: {
-              resume: next_step
-            }
-          },
-          callbacks
-        );
-      } else {
-        // Fallback to direct validated request if no context provider available
-        console.warn("CreatePromptTool: No streaming context available - using fallback");
-        await sendValidatedStreamRequest(
-          {
-            input: {input: ""},
-            command: {
-              resume: next_step
-            }
-          },
-          callbacks,
-          {
-            enableValidation: true,
-            maxRetries: 3,
-            retryDelay: 1000,
-            processor: defaultStreamProcessor
-          }
-        );
-      }
-    } catch (error) {
-      console.error("CreatePromptTool: Unexpected error:", error);
-      setIsLoading(false);
-      setSubmitted(false); // Allow retry on error
-    }
+    await sendCommand(next_step);
   };
 
   const handleCopy = () => {
@@ -125,12 +29,9 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
   };
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <Card className="border-0 bg-white shadow-sm overflow-hidden">
-        {/* <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
-          Prompt
-        </CardHeader> */}
-        <CardContent className="space-y-2 px-8 pb-2">
+    <div className="custom-tool-root">
+      <Card className="custom-tool-card">
+        <CardContent className="custom-tool-content">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xl font-semibold">Prompt </span>
