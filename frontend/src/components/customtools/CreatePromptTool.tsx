@@ -91,7 +91,7 @@ export const CreatePromptTool = ({argsText}: CustomToolProps) => {
             )}
             {submitted && !isLoading && (
               <div className="flex-1 text-center text-gray-600 text-sm">
-                Request submitted. Results will appear above.
+                Request submitted. Results will appear below.
               </div>
             )}
           </div>

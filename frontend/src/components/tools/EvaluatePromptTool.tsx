@@ -2,6 +2,7 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {defaultStreamProcessor} from "@/services/StreamProcessingService";
 import {
   sendStreamRequestWithRetry,
   type AdvancedStreamCallbacks
@@ -10,10 +11,6 @@ import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
 import {useStreaming as useStreamingContext} from "../CustomChat";
-import {
-  defaultStreamProcessor,
-  streamUtils
-} from "@/services/StreamProcessingService";
 
 // Standardized streaming hook for all tools
 const useStandardStreaming = () => {
@@ -61,7 +58,8 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
         console.log("EvaluatePromptTool: Raw response chunk:", chunk);
 
         // Process the chunk for tool calls and other events
-        const processedResponses = defaultStreamProcessor.processResponse(chunk);
+        const processedResponses =
+          defaultStreamProcessor.processResponse(chunk);
         for (const response of processedResponses) {
           console.log("EvaluatePromptTool: Processed response:", response);
           // Response is handled by parent component via context
@@ -95,7 +93,9 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
         );
       } else {
         // Fallback to direct request with retries if no context provider available
-        console.warn("EvaluatePromptTool: No streaming context available - using fallback");
+        console.warn(
+          "EvaluatePromptTool: No streaming context available - using fallback"
+        );
         await sendStreamRequestWithRetry(
           {
             input: {input: ""},
@@ -210,7 +210,7 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
               </div>
             ) : (
               <div className="flex-1 text-center text-gray-600 text-sm">
-                Request submitted. Results will appear above.
+                Request submitted. Results will appear below.
               </div>
             )}
           </div>
