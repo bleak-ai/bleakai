@@ -153,7 +153,7 @@ export default function CustomChat() {
     <StreamingContext.Provider
       value={{handleStreamRequest: handleStreamingRequest}}
     >
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-3xl mx-auto">
         <CardHeader>
           <CardTitle>LangGraph Stream Demo</CardTitle>
           {currentThreadId && (
@@ -185,7 +185,7 @@ export default function CustomChat() {
             </Button>
           </div>
           {output && (
-            <pre className="bg-muted p-4 rounded-md text-sm whitespace-pre-wrap overflow-auto max-h-96">
+            <pre className="bg-muted p-4 rounded-md text-sm whitespace-pre-wrap overflow-auto">
               {output}
             </pre>
           )}
