@@ -11,8 +11,7 @@ from langchain_core.messages import (
 )
 from langchain_core.tools import tool
 from langgraph.types import Command, interrupt
-
-from state import Question
+from src.state import Question
 
 
 @tool(

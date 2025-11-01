@@ -9,13 +9,12 @@ from langchain_core.messages import (
 )
 from langgraph.graph import START, StateGraph
 from langgraph.types import Command
-
-from prompts import (
+from src.prompts import (
     CLARIFY_PROMPT,
     PROMPT_TEMPLATE,
 )
-from state import GraphState
-from utils import (
+from src.state import GraphState
+from src.utils import (
     ask_questions_tool,
     create_prompt_tool,
     evaluate_prompt_tool,
@@ -67,7 +66,7 @@ async def generate_or_improve_prompt(
 
     tools = [create_prompt_tool]
     llm_with_tools = llm.bind_tools(tools)
-    res = llm_with_tools.invoke(prompt)
+    res = await llm_with_tools.ainvoke(prompt)
 
     new_prompt = res.tool_calls[0]["args"]["prompt"]
 
@@ -157,7 +156,7 @@ async def ask_questions_node(
 
     llm_with_tools = llm.bind_tools(tools)
 
-    response = llm_with_tools.invoke([("human", prompt)])
+    response = await llm_with_tools.ainvoke([("human", prompt)])
 
     return Command(goto="tool_supervisor", update={"messages": [response]})
 
@@ -219,7 +218,7 @@ async def autoimprove(
 
     tools = [suggest_improvements_tool]
     llm_with_tools = llm.bind_tools(tools)
-    res = llm_with_tools.invoke(prompt)
+    res = await llm_with_tools.ainvoke(prompt)
 
     return Command(goto="generate_or_improve_prompt", update={"messages": [res]})
 
@@ -290,7 +289,7 @@ async def evaluate_prompt_node(
     tools = [evaluate_prompt_tool]
     llm_with_tools = llm.bind_tools(tools)
 
-    response = llm_with_tools.invoke([("human", evaluation_prompt)])
+    response = await llm_with_tools.ainvoke([("human", evaluation_prompt)])
 
     return Command(goto="tool_supervisor", update={"messages": [response]})
 

@@ -17,3 +17,7 @@ studio:
 # Run tests
 test:
 	@uv run pytest -v -s
+
+
+backend-dev: 
+	@ cd backend && uv run uvicorn main:app --reload  
