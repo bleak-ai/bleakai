@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  sendStreamRequestWithRetryAsync,
-  type AsyncStreamOptions
-} from "@/utils/api";
+import { sendStreamRequestAsync } from "@/utils/api";
 import {useCallback} from "react";
 import {useStreaming as useStreamingContext} from "../../CustomChat";
 import type {ToolStreamingCallbacks} from "./types";
@@ -34,18 +31,8 @@ export const useToolStreamingRequest = () => {
   const executeStreamRequest = useCallback(
     async (
       requestData: any,
-      callbacks: ToolStreamingCallbacks,
-      options?: {
-        maxRetries?: number;
-        retryDelay?: number;
-      }
+      callbacks: ToolStreamingCallbacks
     ) => {
-      const requestOptions: AsyncStreamOptions = {
-        maxRetries: 3,
-        retryDelay: 1000,
-        ...options
-      };
-
       try {
         callbacks.onStart?.();
 
@@ -54,12 +41,12 @@ export const useToolStreamingRequest = () => {
           // The context version now handles all internal processing
           await handleStreamRequest(requestData);
         } else {
-          // Fallback to direct request with retries if no context provider available
+          // Fallback to direct request if no context provider available
           console.warn(
             "Tool streaming: No streaming context available - using fallback"
           );
 
-          for await (const chunk of sendStreamRequestWithRetryAsync(requestData, requestOptions)) {
+          for await (const chunk of sendStreamRequestAsync(requestData)) {
             callbacks.onResponse?.(chunk);
           }
         }

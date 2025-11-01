@@ -13,22 +13,19 @@ import {
 import {
   createNewThread,
   getCurrentThreadId,
-  sendStreamRequestWithRetryAsync,
-  type AsyncStreamOptions,
+  sendStreamRequestAsync,
   type StreamRequest
 } from "@/utils/api";
 import {createContext, useContext, useEffect, useState} from "react";
 import {AskQuestionTool} from "./customtools/AskQuestionTool";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
+import {EvaluatePromptTool} from "./customtools/EvaluatePromptTool";
 import {SuggestImprovementsTool} from "./customtools/SuggestImprovementsTool";
 import {TestPromptTool} from "./customtools/TestPromptTool";
-import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
 
 // Context to provide streaming callback to tools
 export const StreamingContext = createContext<{
-  handleStreamRequest:
-    | ((request: StreamRequest) => Promise<void>)
-    | null;
+  handleStreamRequest: ((request: StreamRequest) => Promise<void>) | null;
 }>({
   handleStreamRequest: null
 });
@@ -138,15 +135,11 @@ export default function CustomChat() {
     setIsLoading(true);
 
     try {
-      const options: AsyncStreamOptions = {
-        maxRetries: 3,
-        retryDelay: 1000
-      };
-
       // Process the stream using async iteration
-      for await (const chunk of sendStreamRequestWithRetryAsync(request, options)) {
+      for await (const chunk of sendStreamRequestAsync(request)) {
         // Process the chunk for tool calls and other events
-        const processedResponses = defaultStreamProcessor.processResponse(chunk);
+        const processedResponses =
+          defaultStreamProcessor.processResponse(chunk);
         for (const response of processedResponses) {
           if (streamUtils.isToolCall(response)) {
             handleProcessedResponse(response);

@@ -106,63 +106,6 @@ export interface StreamResponse {
   done: boolean;
 }
 
-export interface AsyncStreamOptions {
-  maxRetries?: number;
-  retryDelay?: number;
-}
-
-// Advanced functionality for those who need it - kept separate to avoid confusion
-export interface AdvancedStreamCallbacks extends StreamCallbacks {
-  onStart?: () => void;
-  onRetry?: (attempt: number, maxAttempts: number) => void;
-}
-
-export interface AdvancedStreamOptions {
-  maxRetries?: number;
-  retryDelay?: number;
-}
-
-/**
- * Enhanced stream request with retries - for advanced use cases
- */
-export async function sendStreamRequestWithRetry(
-  request: StreamRequest,
-  callbacks: AdvancedStreamCallbacks,
-  options: AdvancedStreamOptions = {}
-): Promise<void> {
-  const { maxRetries = 3, retryDelay = 1000 } = options;
-  let attempt = 0;
-  const maxAttempts = maxRetries + 1;
-
-  const attemptRequest = async (): Promise<void> => {
-    try {
-      attempt++;
-
-      if (attempt > 1) {
-        callbacks.onRetry?.(attempt - 1, maxAttempts);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-      }
-
-      callbacks.onStart?.();
-
-      await sendStreamRequest(request, {
-        onResponse: callbacks.onResponse,
-        onComplete: callbacks.onComplete,
-        onError: callbacks.onError
-      });
-    } catch (error) {
-      console.error(`Error in stream request (attempt ${attempt}/${maxAttempts}):`, error);
-
-      if (attempt < maxAttempts) {
-        return attemptRequest();
-      } else {
-        callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
-      }
-    }
-  };
-
-  await attemptRequest();
-}
 
 // Async/await streaming functions
 
@@ -209,40 +152,6 @@ export async function* sendStreamRequestAsync(
   }
 }
 
-/**
- * Async stream request with retry logic
- */
-export async function* sendStreamRequestWithRetryAsync(
-  request: StreamRequest,
-  options: AsyncStreamOptions = {}
-): AsyncIterable<string> {
-  const { maxRetries = 3, retryDelay = 1000 } = options;
-  let attempt = 0;
-  const maxAttempts = maxRetries + 1;
-
-  const attemptRequest = async function* (): AsyncIterable<string> {
-    try {
-      attempt++;
-
-      if (attempt > 1) {
-        console.log(`Retrying stream request (attempt ${attempt - 1}/${maxAttempts})`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-      }
-
-      yield* sendStreamRequestAsync(request);
-    } catch (error) {
-      console.error(`Error in async stream request (attempt ${attempt}/${maxAttempts}):`, error);
-
-      if (attempt < maxAttempts) {
-        yield* attemptRequest();
-      } else {
-        throw error instanceof Error ? error : new Error(String(error));
-      }
-    }
-  };
-
-  yield* attemptRequest();
-}
 
 /**
  * Send async stream request with a specific thread ID

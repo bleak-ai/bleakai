@@ -4,8 +4,8 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {defaultStreamProcessor} from "@/services/StreamProcessingService";
 import {
-  sendStreamRequestWithRetry,
-  type AdvancedStreamCallbacks
+  sendStreamRequest,
+  type StreamCallbacks
 } from "@/utils/api";
 import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
@@ -50,10 +50,7 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
 
     console.log("EvaluatePromptTool: Submitting request for step:", next_step);
 
-    const callbacks: AdvancedStreamCallbacks = {
-      onStart: () => {
-        console.log("EvaluatePromptTool: Starting streaming request...");
-      },
+    const callbacks: StreamCallbacks = {
       onResponse: (chunk: string) => {
         console.log("EvaluatePromptTool: Raw response chunk:", chunk);
 
@@ -73,9 +70,6 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
         console.error("EvaluatePromptTool: Streaming request error:", error);
         setIsLoading(false);
         setSubmitted(false); // Allow retry on error
-      },
-      onRetry: (attempt: number, maxAttempts: number) => {
-        console.log(`EvaluatePromptTool: Retry ${attempt}/${maxAttempts}`);
       }
     };
 
@@ -92,22 +86,18 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
           callbacks
         );
       } else {
-        // Fallback to direct request with retries if no context provider available
+        // Fallback to direct request if no context provider available
         console.warn(
           "EvaluatePromptTool: No streaming context available - using fallback"
         );
-        await sendStreamRequestWithRetry(
+        await sendStreamRequest(
           {
             input: {input: ""},
             command: {
               resume: next_step
             }
           },
-          callbacks,
-          {
-            maxRetries: 3,
-            retryDelay: 1000
-          }
+          callbacks
         );
       }
     } catch (error) {

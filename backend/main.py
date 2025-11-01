@@ -24,7 +24,7 @@ async def stream_updates(request: Request):
     body = await request.json()
 
     # Get thread_id from request or use default
-    # thread_id = body.get("thread_id", "1")
+    thread_id = body.get("thread_id", "1")
     thread_id = "1"
     config = {"configurable": {"thread_id": thread_id}}
 
