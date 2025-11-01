@@ -57,31 +57,48 @@ export default function CustomChat() {
 
       // Handle array of responses
       const responses = Array.isArray(jsonData) ? jsonData : [jsonData];
-
       for (const response of responses) {
-        const key = Object.keys(response)[0];
-        console.log("Received response:", key);
+        try {
+          const key = Object.keys(response)[0];
+          console.log("Received response:", key);
 
-        if (key === "generate_or_improve_prompt") {
-          const itemToRender = (
-            <CreatePromptTool argsText={JSON.stringify(response[key])} />
-          );
-          setOutput((prev) => [...prev, itemToRender]);
-        } else if (key == "evaluate_prompt_node") {
-          const itemToRender = (
-            <EvaluatePromptTool argsText={JSON.stringify(response[key])} />
-          );
-          setOutput((prev) => [...prev, itemToRender]);
-        } else {
-          // setOutput((prev) => [
-          //   ...prev,
-          //   <pre key={Math.random()}>
-          //     {JSON.stringify(response, null, 2)}
-          //   </pre>
-          // ]);
+          // Extract args from tool calls for both cases
+          const messages = response[key]?.messages || [];
+          console.log("Received messages:", messages);
+          const toolCalls = messages
+            .flatMap((msg) => msg.kwargs?.tool_calls || msg.tool_calls || [])
+            .filter((call) => call?.args);
+          console.log("Received tool calls:", toolCalls);
+          const args = toolCalls[0]?.args || {};
+
+          console.log("Received args:", args);
+
+          if (key === "generate_or_improve_prompt") {
+            const itemToRender = (
+              <CreatePromptTool argsText={JSON.stringify(args)} />
+            );
+            setOutput((prev) => [...prev, itemToRender]);
+          } else if (key == "evaluate_prompt_node") {
+            const itemToRender = (
+              <EvaluatePromptTool argsText={JSON.stringify(args)} />
+            );
+            setOutput((prev) => [...prev, itemToRender]);
+          } else {
+            // setOutput((prev) => [
+            //   ...prev,
+            //   <pre key={Math.random()}>
+            //     {JSON.stringify(response, null, 2)}
+            //   </pre>
+            // ]);
+          }
+        } catch (err) {
+          console.log("Error parsing JSON:", err);
+          // If parsing fails, display the raw chunk
+          setOutput((prev) => [...prev, <pre>{chunk}</pre>]);
         }
       }
-    } catch {
+    } catch (err) {
+      console.log("Error parsing JSON:", err);
       // If parsing fails, display the raw chunk
       setOutput((prev) => [...prev, <pre>{chunk}</pre>]);
     }
