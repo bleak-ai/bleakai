@@ -63,19 +63,19 @@ export default function CustomChat() {
   const registerTools = () => {
     const tools = [
       toolRegistryUtils.createToolConfig(
-        "generate_or_improve_prompt",
+        "create_prompt_tool",
         CreatePromptTool
       ),
       toolRegistryUtils.createToolConfig(
-        "evaluate_prompt_node",
+        "evaluate_prompt_tool",
         EvaluatePromptTool
       ),
-      toolRegistryUtils.createToolConfig("test_prompt", TestPromptTool),
+      toolRegistryUtils.createToolConfig("test_prompt_tool", TestPromptTool),
       toolRegistryUtils.createToolConfig(
-        "autoimprove",
+        "suggest_improvements_tool",
         SuggestImprovementsTool
       ),
-      toolRegistryUtils.createToolConfig("ask_questions_node", AskQuestionTool)
+      toolRegistryUtils.createToolConfig("ask_questions_tool", AskQuestionTool)
     ];
 
     toolRegistryUtils.registerTools(tools);
@@ -84,6 +84,7 @@ export default function CustomChat() {
   // Process validated responses and render appropriate components
   const handleProcessedResponse = (response: ProcessedResponse) => {
     if (streamUtils.isToolCall(response)) {
+      console.log("cleaned response", response);
       const toolComponent = defaultToolRegistry.getToolComponent(
         response.toolName
       );
@@ -112,7 +113,6 @@ export default function CustomChat() {
       );
       setOutput((prev) => [...prev, errorComponent]);
     }
-    console.log("Regular message not rendered:", response);
     // Regular messages are currently not rendered, but could be added here
   };
 
@@ -138,9 +138,11 @@ export default function CustomChat() {
       // Process the stream using async iteration
       for await (const chunk of sendStreamRequestAsync(request)) {
         // Process the chunk for tool calls and other events
+        console.log("chunk", chunk);
         const processedResponses =
           defaultStreamProcessor.processResponse(chunk);
         for (const response of processedResponses) {
+          console.log("response", response);
           if (streamUtils.isToolCall(response)) {
             handleProcessedResponse(response);
           } else if (streamUtils.isError(response)) {

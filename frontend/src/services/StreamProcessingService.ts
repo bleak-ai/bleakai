@@ -122,7 +122,7 @@ export class StreamProcessingService {
         const toolCall = toolCalls[0]; // For now, handle first tool call
         return {
           type: "tool_call",
-          toolName: key,
+          toolName: toolCall.name,
           args: toolCall.args,
           data: response[key],
           rawResponse: response
