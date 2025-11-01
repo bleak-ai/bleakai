@@ -13,8 +13,8 @@ import {
 import {
   createNewThread,
   getCurrentThreadId,
-  sendStreamRequestWithRetry,
-  type AdvancedStreamCallbacks,
+  sendStreamRequestWithRetryAsync,
+  type AsyncStreamOptions,
   type StreamRequest
 } from "@/utils/api";
 import {createContext, useContext, useEffect, useState} from "react";
@@ -27,10 +27,7 @@ import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
 // Context to provide streaming callback to tools
 export const StreamingContext = createContext<{
   handleStreamRequest:
-    | ((
-        request: StreamRequest,
-        callbacks: AdvancedStreamCallbacks
-      ) => Promise<void>)
+    | ((request: StreamRequest) => Promise<void>)
     | null;
 }>({
   handleStreamRequest: null
@@ -118,6 +115,7 @@ export default function CustomChat() {
       );
       setOutput((prev) => [...prev, errorComponent]);
     }
+    console.log("Regular message not rendered:", response);
     // Regular messages are currently not rendered, but could be added here
   };
 
@@ -135,22 +133,20 @@ export default function CustomChat() {
     setOutput((prev) => [...prev, errorComponent]);
   };
 
-  // Centralized streaming request wrapper using simplified API
-  const handleStreamingRequest = async (
-    request: StreamRequest,
-    callbacks: AdvancedStreamCallbacks
-  ) => {
+  // Centralized streaming request wrapper using async/await pattern
+  const handleStreamingRequest = async (request: StreamRequest) => {
     setIsLoading(true);
 
-    const enhancedCallbacks: AdvancedStreamCallbacks = {
-      ...callbacks,
-      onResponse: (chunk: string) => {
-        // Handle the raw response chunk
-        callbacks.onResponse?.(chunk);
+    try {
+      const options: AsyncStreamOptions = {
+        maxRetries: 3,
+        retryDelay: 1000
+      };
 
+      // Process the stream using async iteration
+      for await (const chunk of sendStreamRequestWithRetryAsync(request, options)) {
         // Process the chunk for tool calls and other events
-        const processedResponses =
-          defaultStreamProcessor.processResponse(chunk);
+        const processedResponses = defaultStreamProcessor.processResponse(chunk);
         for (const response of processedResponses) {
           if (streamUtils.isToolCall(response)) {
             handleProcessedResponse(response);
@@ -159,14 +155,12 @@ export default function CustomChat() {
           }
         }
       }
-    };
-
-    await sendStreamRequestWithRetry(request, enhancedCallbacks, {
-      maxRetries: 3,
-      retryDelay: 1000
-    });
-
-    setIsLoading(false);
+    } catch (error) {
+      console.error("Streaming request failed:", error);
+      handleValidationError(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewThread = () => {
@@ -180,19 +174,9 @@ export default function CustomChat() {
 
     setOutput([]);
 
-    await handleStreamingRequest(
-      {
-        input: {input: message}
-      },
-      {
-        onStart: () => console.log("Starting message send..."),
-        onResponse: (chunk: string) => {
-          console.log("Raw response chunk:", chunk);
-        },
-        onComplete: () => console.log("Message send completed"),
-        onError: (error: Error) => console.error("Message send error:", error)
-      }
-    );
+    await handleStreamingRequest({
+      input: {input: message}
+    });
   }
 
   return (
