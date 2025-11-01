@@ -4,19 +4,28 @@ import {Input} from "@/components/ui/input";
 import {
   createNewThread,
   getCurrentThreadId,
-  sendStreamRequest,
-  type StreamingCallbacks,
+  sendValidatedStreamRequest,
+  type EnhancedStreamingCallbacks,
   type StreamRequest
 } from "@/utils/api";
 import {helloWorld} from "bleakai";
 import {createContext, useContext, useEffect, useState} from "react";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
 import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
+import {
+  type ProcessedResponse,
+  defaultStreamProcessor,
+  streamUtils
+} from "@/services/StreamProcessingService";
+import {
+  defaultToolRegistry,
+  toolRegistryUtils
+} from "@/services/ToolRegistryService";
 
 // Context to provide streaming callback to tools
 export const StreamingContext = createContext<{
   handleStreamRequest:
-    | ((request: StreamRequest, callbacks: StreamingCallbacks) => Promise<void>)
+    | ((request: StreamRequest, callbacks: EnhancedStreamingCallbacks) => Promise<void>)
     | null;
 }>({
   handleStreamRequest: null
@@ -34,7 +43,7 @@ export const useStreaming = () => {
 export default function CustomChat() {
   helloWorld();
   const [message, setMessage] = useState("");
-  const [output, setOutput] = useState<React.ReactNode[]>([]); // store React elements, not strings
+  const [output, setOutput] = useState<React.ReactNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
 
@@ -47,80 +56,124 @@ export default function CustomChat() {
       const newThreadId = createNewThread();
       setCurrentThreadId(newThreadId);
     }
+
+    // Register tools with the registry
+    registerTools();
   }, []);
 
-  // Centralized response handler for all streaming responses
-  const handleStreamResponse = (chunk: string) => {
-    try {
-      // Parse the JSON response
-      const jsonData = JSON.parse(chunk);
-
-      console.log("Received JSON data:", jsonData);
-
-      // Handle array of responses
-      const responses = Array.isArray(jsonData) ? jsonData : [jsonData];
-      for (const response of responses) {
-        try {
-          const key = Object.keys(response)[0];
-          console.log("Received response:", key);
-
-          // Extract args from tool calls for both cases
-          const messages = response[key]?.messages || [];
-          console.log("Received messages:", messages);
-          const toolCalls = messages
-            .flatMap((msg) => msg.kwargs?.tool_calls || msg.tool_calls || [])
-            .filter((call) => call?.args);
-          console.log("Received tool calls:", toolCalls);
-          const args = toolCalls[0]?.args || {};
-
-          console.log("Received args:", args);
-
-          if (key === "generate_or_improve_prompt") {
-            const itemToRender = (
-              <CreatePromptTool argsText={JSON.stringify(args)} />
-            );
-            setOutput((prev) => [...prev, itemToRender]);
-          } else if (key == "evaluate_prompt_node") {
-            const itemToRender = (
-              <EvaluatePromptTool argsText={JSON.stringify(args)} />
-            );
-            setOutput((prev) => [...prev, itemToRender]);
-          } else {
-            // setOutput((prev) => [
-            //   ...prev,
-            //   <pre key={Math.random()}>
-            //     {JSON.stringify(response, null, 2)}
-            //   </pre>
-            // ]);
+  // Register available tools
+  const registerTools = () => {
+    const tools = [
+      toolRegistryUtils.createToolConfig(
+        "generate_or_improve_prompt",
+        CreatePromptTool,
+        {
+          metadata: {
+            name: "generate_or_improve_prompt",
+            description: "Generate or improve prompts",
+            category: "prompting"
           }
-        } catch (err) {
-          console.log("Error parsing JSON:", err);
-          // If parsing fails, display the raw chunk
-          setOutput((prev) => [...prev, <pre>{chunk}</pre>]);
         }
-      }
-    } catch (err) {
-      console.log("Error parsing JSON:", err);
-      // If parsing fails, display the raw chunk
-      setOutput((prev) => [...prev, <pre>{chunk}</pre>]);
-    }
+      ),
+      toolRegistryUtils.createToolConfig(
+        "evaluate_prompt_node",
+        EvaluatePromptTool,
+        {
+          metadata: {
+            name: "evaluate_prompt_node",
+            description: "Evaluate prompt quality",
+            category: "evaluation"
+          }
+        }
+      )
+    ];
+
+    toolRegistryUtils.registerTools(tools);
   };
 
-  // Centralized streaming request wrapper
+  // Process validated responses and render appropriate components
+  const handleProcessedResponse = (response: ProcessedResponse) => {
+    console.log("Processing validated response:", response);
+
+    if (streamUtils.isToolCall(response)) {
+      const toolComponent = defaultToolRegistry.getToolComponent(response.toolName);
+
+      if (toolComponent) {
+        // Record tool usage
+        defaultToolRegistry.recordToolUsage(response.toolName);
+
+        // Create the tool component with args
+        const ToolComponent = toolComponent;
+        const itemToRender = (
+          <ToolComponent argsText={JSON.stringify(response.args)} />
+        );
+
+        setOutput((prev) => [...prev, itemToRender]);
+      } else {
+        console.warn(`No component registered for tool: ${response.toolName}`);
+      }
+    } else if (streamUtils.isError(response)) {
+      const errorMessage = streamUtils.getErrorMessage(response.error);
+      const errorComponent = (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-red-800 font-semibold">Error</h3>
+          <p className="text-red-600 text-sm">{errorMessage}</p>
+        </div>
+      );
+      setOutput((prev) => [...prev, errorComponent]);
+    }
+    // Regular messages are currently not rendered, but could be added here
+  };
+
+  // Handle validation errors
+  const handleValidationError = (error: any) => {
+    console.error("Validation error:", error);
+    const errorComponent = (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h3 className="text-red-800 font-semibold">Stream Processing Error</h3>
+        <p className="text-red-600 text-sm">
+          {error?.message || "An unknown error occurred while processing the stream"}
+        </p>
+      </div>
+    );
+    setOutput((prev) => [...prev, errorComponent]);
+  };
+
+  // Handle retry attempts
+  const handleRetry = (attempt: number, maxAttempts: number) => {
+    console.log(`Retrying stream request... Attempt ${attempt}/${maxAttempts}`);
+    const retryComponent = (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-yellow-600 text-sm">
+          Retrying... Attempt {attempt} of {maxAttempts}
+        </p>
+      </div>
+    );
+    setOutput((prev) => [...prev, retryComponent]);
+  };
+
+  // Centralized streaming request wrapper using new services
   const handleStreamingRequest = async (
     request: StreamRequest,
-    callbacks: StreamingCallbacks
+    callbacks: EnhancedStreamingCallbacks
   ) => {
     setIsLoading(true);
-    callbacks.onStart?.();
 
-    await sendStreamRequest(request, (chunk) => {
-      callbacks.onResponse(chunk);
-      handleStreamResponse(chunk); // Process in CustomChat
+    const enhancedCallbacks: EnhancedStreamingCallbacks = {
+      ...callbacks,
+      onProcessedResponse: handleProcessedResponse,
+      onValidationError: handleValidationError,
+      onRetry: handleRetry
+    };
+
+    await sendValidatedStreamRequest(request, enhancedCallbacks, {
+      enableValidation: true,
+      maxRetries: 3,
+      retryDelay: 1000,
+      processor: defaultStreamProcessor
     });
 
     setIsLoading(false);
-    callbacks.onComplete?.();
   };
 
   const handleNewThread = () => {
@@ -140,11 +193,11 @@ export default function CustomChat() {
       },
       {
         onStart: () => console.log("Starting message send..."),
-        onResponse: (chunk) => {
-          console.log("Send response chunk:", chunk);
+        onResponse: (chunk: string) => {
+          console.log("Raw response chunk:", chunk);
         },
         onComplete: () => console.log("Message send completed"),
-        onError: (error) => console.error("Message send error:", error)
+        onError: (error: Error) => console.error("Message send error:", error)
       }
     );
   }
@@ -155,7 +208,7 @@ export default function CustomChat() {
     >
       <Card className="w-full max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle>LangGraph Stream Demo</CardTitle>
+          <CardTitle>LangGraph Stream Demo (Centralized)</CardTitle>
           {currentThreadId && (
             <div className="text-sm text-muted-foreground">
               Thread ID:{" "}
@@ -184,11 +237,11 @@ export default function CustomChat() {
               New Thread
             </Button>
           </div>
-          {output && (
-            <pre className="bg-muted p-4 rounded-md text-sm whitespace-pre-wrap overflow-auto">
-              {output}
-            </pre>
-          )}
+          <div className="space-y-4">
+            {output.map((item, index) => (
+              <div key={index}>{item}</div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </StreamingContext.Provider>
