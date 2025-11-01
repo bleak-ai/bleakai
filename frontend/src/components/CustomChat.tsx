@@ -66,25 +66,11 @@ export default function CustomChat() {
     const tools = [
       toolRegistryUtils.createToolConfig(
         "generate_or_improve_prompt",
-        CreatePromptTool,
-        {
-          metadata: {
-            name: "generate_or_improve_prompt",
-            description: "Generate or improve prompts",
-            category: "prompting"
-          }
-        }
+        CreatePromptTool
       ),
       toolRegistryUtils.createToolConfig(
         "evaluate_prompt_node",
-        EvaluatePromptTool,
-        {
-          metadata: {
-            name: "evaluate_prompt_node",
-            description: "Evaluate prompt quality",
-            category: "evaluation"
-          }
-        }
+        EvaluatePromptTool
       )
     ];
 
