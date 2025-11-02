@@ -170,7 +170,7 @@ export default function CustomChat() {
     setOutput([]);
 
     await handleStreamingRequest({
-      input: {input: message}
+      input: message
     });
   }
 

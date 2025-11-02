@@ -1,8 +1,8 @@
-import { threadService, threadUtils } from "../services/ThreadService";
+import {threadService, threadUtils} from "../services/ThreadService";
 
 // Minimal request interface
 export interface StreamRequest {
-  input: any;
+  input: string;
   command?: {
     resume?: string;
   };
@@ -20,9 +20,8 @@ export interface StreamCallbacks {
  * Simple stream request - the main function most components should use
  */
 export async function sendStreamRequest(
-  request: StreamRequest,
-  callbacks: StreamCallbacks
-): Promise<void> {
+  request: StreamRequest
+): Promise<string[]> {
   try {
     // Auto-include thread ID if not provided
     const requestWithThread = {
@@ -30,11 +29,14 @@ export async function sendStreamRequest(
       thread_id: request.thread_id || threadUtils.ensureThread()
     };
 
-    console.log("Sending stream request with thread ID:", requestWithThread.thread_id);
+    console.log(
+      "Sending stream request with thread ID:",
+      requestWithThread.thread_id
+    );
 
     const res = await fetch("http://localhost:8000/stream", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify(requestWithThread)
     });
 
@@ -45,67 +47,35 @@ export async function sendStreamRequest(
     const reader = res.body?.getReader();
     const decoder = new TextDecoder();
 
+    const chunks = [];
     if (reader) {
       while (true) {
-        const { done, value } = await reader.read();
+        const {done, value} = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
-        callbacks.onResponse(chunk);
+        chunks.push(chunk);
       }
     }
-
-    callbacks.onComplete?.();
+    return chunks;
   } catch (error) {
     console.error("Error sending stream request:", error);
-    callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+    throw error;
   }
-}
-
-/**
- * Send stream request with a specific thread ID
- */
-export async function sendStreamRequestWithThread(
-  request: Omit<StreamRequest, "thread_id">,
-  threadId: string,
-  callbacks: StreamCallbacks,
-  setAsCurrentThread: boolean = true
-): Promise<void> {
-  // Optionally set as current thread
-  if (setAsCurrentThread) {
-    threadService.setThreadId(threadId);
-  }
-
-  return sendStreamRequest({ ...request, thread_id: threadId }, callbacks);
-}
-
-/**
- * Send stream request with a new thread ID
- */
-export async function sendStreamRequestWithNewThread(
-  request: Omit<StreamRequest, "thread_id">,
-  callbacks: StreamCallbacks
-): Promise<string> {
-  const newThreadId = threadService.createNewThread();
-
-  await sendStreamRequest({ ...request, thread_id: newThreadId }, callbacks);
-
-  return newThreadId;
 }
 
 // Thread utilities - simplified exports
-export const getCurrentThreadId = (): string | null => threadService.getThreadId();
-export const setCurrentThreadId = (threadId: string | null): void => threadService.setThreadId(threadId);
+export const getCurrentThreadId = (): string | null =>
+  threadService.getThreadId();
+export const setCurrentThreadId = (threadId: string | null): void =>
+  threadService.setThreadId(threadId);
 export const createNewThread = (): string => threadService.createNewThread();
-export const subscribeToThreadChanges = (callback: (threadId: string | null) => void): (() => void) =>
-  threadService.subscribe(callback);
 
 // Async streaming interfaces for the new async/await pattern
 export interface StreamResponse {
   chunk: string;
   done: boolean;
 }
-
 
 // Async/await streaming functions
 
@@ -122,11 +92,14 @@ export async function* sendStreamRequestAsync(
       thread_id: request.thread_id || threadUtils.ensureThread()
     };
 
-    console.log("Sending async stream request with thread ID:", requestWithThread.thread_id);
+    console.log(
+      "Sending async stream request with thread ID:",
+      requestWithThread.thread_id
+    );
 
     const res = await fetch("http://localhost:8000/stream", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json"},
       body: JSON.stringify(requestWithThread)
     });
 
@@ -139,7 +112,7 @@ export async function* sendStreamRequestAsync(
 
     if (reader) {
       while (true) {
-        const { done, value } = await reader.read();
+        const {done, value} = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
@@ -151,7 +124,6 @@ export async function* sendStreamRequestAsync(
     throw error instanceof Error ? error : new Error(String(error));
   }
 }
-
 
 /**
  * Send async stream request with a specific thread ID
@@ -166,7 +138,7 @@ export async function* sendStreamRequestWithThreadAsync(
     threadService.setThreadId(threadId);
   }
 
-  yield* sendStreamRequestAsync({ ...request, thread_id: threadId });
+  yield* sendStreamRequestAsync({...request, thread_id: threadId});
 }
 
 /**
@@ -174,10 +146,10 @@ export async function* sendStreamRequestWithThreadAsync(
  */
 export async function sendStreamRequestWithNewThreadAsync(
   request: Omit<StreamRequest, "thread_id">
-): Promise<{ threadId: string; stream: AsyncIterable<string> }> {
+): Promise<{threadId: string; stream: AsyncIterable<string>}> {
   const newThreadId = threadService.createNewThread();
 
-  const stream = sendStreamRequestAsync({ ...request, thread_id: newThreadId });
+  const stream = sendStreamRequestAsync({...request, thread_id: newThreadId});
 
-  return { threadId: newThreadId, stream };
+  return {threadId: newThreadId, stream};
 }

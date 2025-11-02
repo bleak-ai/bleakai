@@ -54,11 +54,11 @@ async def stream_updates(request: Request):
         )
 
     # Normal flow without resume
-    input_data = body.get("input", {"input": ""})  # Fix this ASAP
+    input_data = body.get("input", "")  # Fix this ASAP
     # if not isinstance(input_data, dict) or "input" not in input_data:
     #     raise HTTPException(status_code=400, detail="Invalid input structure")
 
-    message = {"content": input_data["input"], "type": "human"}
+    message = {"content": input_data, "type": "human"}
     print("message", message)
 
     async def event_generator():
