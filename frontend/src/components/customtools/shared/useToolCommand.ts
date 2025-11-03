@@ -25,34 +25,13 @@ export const useToolCommand = () => {
       try {
         // Simplified request structure - just send the command value
         const requestData = {
-          input: {input: ""},
+          input: "",
           command: {resume: commandValue}
         };
 
         if (handleStreamRequest && isContextAvailable) {
           // Use context streaming with simplified callbacks
-          await handleStreamRequest(requestData, {
-            onStart: () => {
-              console.log(`ToolCommand: Starting command: ${commandValue}`);
-            },
-            onComplete: () => {
-              console.log(`ToolCommand: Command completed: ${commandValue}`);
-              callbacks?.onComplete?.();
-            },
-            onError: (error: Error) => {
-              console.error(
-                `ToolCommand: Command failed: ${commandValue}`,
-                error
-              );
-              setError(error);
-              callbacks?.onError?.(error);
-            },
-            onResponse: () => {
-              console.log(
-                `ToolCommand: Received response for command: ${commandValue}`
-              );
-            }
-          });
+          await handleStreamRequest(requestData);
         } else {
           throw new Error("No streaming context available");
         }

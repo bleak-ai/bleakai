@@ -5,12 +5,11 @@ import {Card, CardContent} from "@/components/ui/card";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
 import type {CustomToolProps} from "./shared";
-import {useToolCommand} from "./shared";
 
-export const CreatePromptTool = ({argsText}: CustomToolProps) => {
+export const CreatePromptTool = ({argsText, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
-  const {sendCommand, isLoading} = useToolCommand();
+  // const {sendCommand, isLoading} = useToolCommand();
 
   const prompt: string = JSON.parse(argsText).prompt;
 
@@ -19,7 +18,16 @@ export const CreatePromptTool = ({argsText}: CustomToolProps) => {
 
     setSubmitted(true);
 
-    await sendCommand(next_step);
+    const requestData = {
+      input: {input: ""},
+      command: {resume: next_step}
+    };
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(requestData);
   };
 
   const handleCopy = () => {
@@ -63,33 +71,30 @@ export const CreatePromptTool = ({argsText}: CustomToolProps) => {
                   variant="outline"
                   className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 gap-2"
                   size="lg"
-                  disabled={isLoading}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  {isLoading ? "Processing..." : "Ask Questions"}
+                  Ask Questions
                 </Button>
                 <Button
                   onClick={() => handleSubmit("evaluate")}
                   variant="outline"
                   className="flex-1 bg-gray-200 border-gray-200 text-gray-800 hover:bg-gray-300 gap-2"
                   size="lg"
-                  disabled={isLoading}
                 >
                   <BarChart3 className="h-4 w-4" />
-                  {isLoading ? "Processing..." : "Evaluate"}
+                  Evaluate{" "}
                 </Button>
                 <Button
                   onClick={() => handleSubmit("test")}
                   className="flex-1 bg-gray-900 hover:bg-gray-800 text-white gap-2"
                   size="lg"
-                  disabled={isLoading}
                 >
                   <Play className="h-4 w-4" />
-                  {isLoading ? "Testing..." : "Test Prompt"}
+                  Test Prompt{" "}
                 </Button>
               </>
             )}
-            {submitted && !isLoading && (
+            {submitted && (
               <div className="flex-1 text-center text-gray-600 text-sm">
                 Request submitted. Results will appear below.
               </div>

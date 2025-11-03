@@ -4,9 +4,23 @@ import {Input} from "@/components/ui/input";
 import {
   processResponse,
   sendStreamRequest,
+  type ProcessedResponse,
   type StreamRequest
 } from "@/custom2/api2";
 import {createContext, useContext, useState} from "react";
+import {AskQuestionTool} from "./customtools/AskQuestionTool";
+import {CreatePromptTool} from "./customtools/CreatePromptTool";
+import {EvaluatePromptTool} from "./customtools/EvaluatePromptTool";
+import {SuggestImprovementsTool} from "./customtools/SuggestImprovementsTool";
+import {TestPromptTool} from "./customtools/TestPromptTool";
+
+const tools = {
+  create_prompt_tool: CreatePromptTool,
+  evaluate_prompt_tool: EvaluatePromptTool,
+  test_prompt_tool: TestPromptTool,
+  suggest_improvements_tool: SuggestImprovementsTool,
+  ask_questions_tool: AskQuestionTool
+};
 
 // Context to provide streaming callback to tools
 export const StreamingContext = createContext<{
@@ -27,6 +41,7 @@ export const useStreaming = () => {
 export default function CustomChat2() {
   const [message, setMessage] = useState("");
   const [output, setOutput] = useState<React.ReactNode[]>([]);
+  const [responses, setResponses] = useState<ProcessedResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
 
@@ -43,17 +58,21 @@ export default function CustomChat2() {
   }
 
   const handleStreamingRequest = async (request: StreamRequest) => {
+    console.log("request", request);
     setIsLoading(true);
 
     const chunks = await sendStreamRequest(request);
     console.log("chunks", chunks);
 
-    const cleanedChunks = chunks.map((chunk) => {
-      return processResponse(chunk);
-    });
+    const cleanedChunks = chunks
+      .map((chunk) => {
+        return processResponse(chunk);
+      })
+      .flatMap((chunk) => chunk);
     console.log("cleanedChunks", cleanedChunks);
     setIsLoading(false);
     setOutput(chunks);
+    setResponses(cleanedChunks);
   };
 
   return (
@@ -95,9 +114,24 @@ export default function CustomChat2() {
           </Button> */}
         </div>
         <div className="space-y-4">
-          {output.map((item, index) => (
+          {/* {output.map((item, index) => (
             <div key={index}>{item}</div>
-          ))}
+          ))} */}
+          {responses.map((response, index) => {
+            console.log("response", response);
+            const ToolComponent = tools[response.toolName ?? ""];
+            console.log("ToolComponent", ToolComponent);
+            if (!ToolComponent) {
+              return <span> Tool not found: {response.toolName}</span>;
+            }
+            return (
+              <ToolComponent
+                key={index}
+                argsText={JSON.stringify(response.args)}
+                onCommand={handleStreamingRequest}
+              />
+            );
+          })}
         </div>
       </CardContent>
     </Card>
