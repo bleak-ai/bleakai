@@ -18,6 +18,7 @@ export interface CustomToolProps {
 }
 
 export type ResponseType = "tool_call" | "message" | "error" | "other";
+export type MessageSender = "user" | "ai" | "system";
 
 export interface ProcessedResponse<TTool> {
   type: ResponseType;
@@ -28,6 +29,7 @@ export interface ProcessedResponse<TTool> {
   rawResponse?: any;
   tool?: TTool;
   content?: string;
+  sender?: MessageSender;
 }
 export class Bleakai<TTool> {
   private endpoint: string;
@@ -169,7 +171,7 @@ export class Bleakai<TTool> {
     data: any,
     content: string
   ): ProcessedResponse<TTool> {
-    return {type: "message", data, content, rawResponse: raw};
+    return {type: "message", data, content, rawResponse: raw, sender: "ai"};
   }
 
   private createOtherResponse(raw: any, data: any): ProcessedResponse<TTool> {

@@ -1,11 +1,11 @@
+import type {ComponentType} from "react"; // <-- Import React-specific types here
+import React from "react";
 import {
   Bleakai,
   type CustomToolProps,
   type ProcessedResponse,
   type StreamRequest
 } from "../../../bleakai/src/index";
-import type {ComponentType} from "react"; // <-- Import React-specific types here
-import React from "react";
 import {AskQuestionTool} from "./customtools/AskQuestionTool";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
 import {EvaluatePromptTool} from "./customtools/EvaluatePromptTool";
@@ -42,7 +42,9 @@ export default function CustomChat3() {
     // Add user message to responses
     const userMessage: ProcessedResponse<ToolComponent> = {
       type: "message",
-      data: inputText
+      data: inputText,
+      content: inputText,
+      sender: "user"
     };
 
     setResponses((prev) => [...prev, userMessage]);
@@ -93,14 +95,35 @@ export default function CustomChat3() {
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white">
         {responses.map((response, index) => {
           if (response.type === "message") {
+            const isUserMessage = response.sender === "user";
+            const isAiMessage = response.sender === "ai";
+
             return (
               <div
                 key={index}
-                className="flex items-start p-3 rounded-xl max-w-full bg-blue-50 self-end rounded-br-sm animate-slide-in"
+                className={`flex items-start p-3 rounded-xl max-w-full animate-slide-in ${
+                  isUserMessage
+                    ? "bg-blue-50 self-end rounded-br-sm"
+                    : isAiMessage
+                    ? "bg-green-50 self-start rounded-bl-sm"
+                    : "bg-gray-50 self-start"
+                }`}
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
-                  <div className="font-semibold text-blue-700 mb-1">User Message:</div>
-                  <pre>{response.content || JSON.stringify(response.data, null, 2)}</pre>
+                  <div
+                    className={`font-semibold mb-1 ${
+                      isUserMessage
+                        ? "text-blue-700"
+                        : isAiMessage
+                        ? "text-green-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {isUserMessage ? "You:" : isAiMessage ? "AI:" : "Message:"}
+                  </div>
+                  <pre>
+                    {response.content || JSON.stringify(response.data, null, 2)}
+                  </pre>
                 </div>
               </div>
             );
@@ -114,24 +137,27 @@ export default function CustomChat3() {
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
                   <div className="font-semibold text-red-700 mb-1">Error:</div>
-                  {response.error?.toString() || response.data || "Unknown error occurred"}
+                  {response.error?.toString() ||
+                    response.data ||
+                    "Unknown error occurred"}
                 </div>
               </div>
             );
           }
 
           if (response.type === "other") {
-            return (
-              <div
-                key={index}
-                className="flex items-start p-3 rounded-xl max-w-full bg-gray-50 border border-gray-200 self-start animate-slide-in"
-              >
-                <div className="flex-1 text-slate-700 leading-6 break-words">
-                  <div className="font-semibold text-gray-700 mb-1">System Message:</div>
-                  <pre>{JSON.stringify(response.data, null, 2)}</pre>
-                </div>
-              </div>
-            );
+            // return (
+            //   <div
+            //     key={index}
+            //     className="flex items-start p-3 rounded-xl max-w-full bg-gray-50 border border-gray-200 self-start animate-slide-in"
+            //   >
+            //     <div className="flex-1 text-slate-700 leading-6 break-words">
+            //       <div className="font-semibold text-gray-700 mb-1">System Message:</div>
+            //       <pre>{JSON.stringify(response.data, null, 2)}</pre>
+            //     </div>
+            //   </div>
+            // );
+            return null;
           }
 
           if (response.type !== "tool_call") {
