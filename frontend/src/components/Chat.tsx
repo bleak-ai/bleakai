@@ -33,16 +33,15 @@ export default function CustomChat() {
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Use useRef to ensure the Bleakai instance is created only once
-  const bleakaiInstanceRef = React.useRef<Bleakai<ToolComponent>>(null!);
-
-  if (!bleakaiInstanceRef.current) {
-    bleakaiInstanceRef.current = new Bleakai<ToolComponent>({
-      url: "http://localhost:8000/stream",
-      tools: toolComponentMap, // The config now matches BleakaiConfig<ToolComponent>
-      thread_id: "chat-session-" + Date.now() // Generate a unique thread_id for this chat session
-    });
-  }
+  const bleakaiInstance = React.useMemo(
+    () =>
+      new Bleakai<ToolComponent>({
+        url: "http://localhost:8000/stream",
+        tools: toolComponentMap,
+        thread_id: "chat-session-" + Date.now()
+      }),
+    []
+  );
 
   const handleInitialRequest = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -66,11 +65,7 @@ export default function CustomChat() {
 
     try {
       // Send the request and get processed responses directly
-      const processedResponses = await bleakaiInstanceRef.current.stream(
-        request
-      );
-
-      console.log("processedResponses", processedResponses);
+      const processedResponses = await bleakaiInstance.stream(request);
 
       // Append new responses to existing ones instead of replacing
       setResponses((prev) => [...prev, ...processedResponses]);
