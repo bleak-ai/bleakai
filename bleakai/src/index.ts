@@ -32,6 +32,7 @@ export class Bleakai {
     this.toolRegistry = config.toolRegistry || {};
   }
 
+  /** Non-streaming: waits for full response */
   async stream(request: StreamRequest): Promise<ProcessedResponse[]> {
     const response = await fetch(this.endpoint, {
       method: "POST",
@@ -43,10 +44,53 @@ export class Bleakai {
     return this.processChunk(text);
   }
 
-  private processChunk(chunk: string): ProcessedResponse[] {
-    const data = JSON.parse(chunk);
-    const items = Array.isArray(data) ? data : [data];
+  /**
+   * Streaming version — yields processed responses as they arrive.
+   * Use with: for await (const chunk of bleakai.streamLive(request)) { ... }
+   */
+  async *streamLive(
+    request: StreamRequest
+  ): AsyncGenerator<ProcessedResponse[], void, void> {
+    const res = await fetch(this.endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", ...this.headers},
+      body: JSON.stringify(request)
+    });
 
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) return;
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, {stream: true});
+      const processed = this.processChunk(chunk);
+
+      if (processed.length > 0) {
+        yield processed;
+      }
+    }
+  }
+
+  // -------------------------------
+  // Shared internal utilities
+  // -------------------------------
+
+  private processChunk(chunk: string): ProcessedResponse[] {
+    let data;
+    try {
+      data = JSON.parse(chunk);
+    } catch {
+      console.warn("Skipping invalid JSON chunk:", chunk);
+      return [];
+    }
+
+    const items = Array.isArray(data) ? data : [data];
     return items
       .map((item) => this.parseResponse(item))
       .filter(Boolean) as ProcessedResponse[];
@@ -61,7 +105,7 @@ export class Bleakai {
       return this.createMessageResponse(response, content);
     }
 
-    const {name, args} = toolCalls[0]; // only handle first for now
+    const {name, args} = toolCalls[0];
     return this.createToolCallResponse(response, content, name, args);
   }
 

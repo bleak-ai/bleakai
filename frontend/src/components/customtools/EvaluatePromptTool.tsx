@@ -5,21 +5,28 @@ import {Card, CardContent} from "@/components/ui/card";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
 import type {CustomToolProps} from "./shared";
-import {useToolCommand} from "./shared";
 
-export const EvaluatePromptTool = ({argsText}: CustomToolProps) => {
+export const EvaluatePromptTool = ({argsText, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
-  const {sendCommand, isLoading} = useToolCommand();
 
   const completionLevel = parseInt(JSON.parse(argsText).evaluation);
   const missingInfo = JSON.parse(argsText).missing_info;
 
   const handleSubmit = async (next_step: "questions" | "test") => {
-    if (submitted || isLoading) return;
+    if (submitted) return;
 
     setSubmitted(true);
 
-    await sendCommand(next_step);
+    const requestData = {
+      input: {},
+      command: {resume: next_step}
+    };
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(requestData);
   };
 
   const percentage = (completionLevel / 6) * 100;
@@ -90,26 +97,18 @@ export const EvaluatePromptTool = ({argsText}: CustomToolProps) => {
                   variant="outline"
                   className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
                   size="lg"
-                  disabled={isLoading}
                 >
-                  {isLoading ? "Processing..." : "Ask Questions"}
+                  Ask Questions
                 </Button>
                 <Button
                   onClick={() => handleSubmit("test")}
                   className="flex-1 bg-slate-900 hover:bg-slate-800 text-white gap-2"
                   size="lg"
-                  disabled={isLoading}
                 >
-                  {isLoading ? "Testing..." : "Test Prompt"}
+                  Test Prompt
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </>
-            ) : isLoading ? (
-              <div className="flex items-center justify-center w-full gap-2 py-2">
-                <p className="text-sm text-slate-500 font-medium">
-                  Processing...
-                </p>
-              </div>
             ) : (
               <div className="flex-1 text-center text-gray-600 text-sm">
                 Request submitted. Results will appear below.

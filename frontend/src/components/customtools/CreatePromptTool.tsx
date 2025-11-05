@@ -19,7 +19,7 @@ export const CreatePromptTool = ({argsText, onCommand}: CustomToolProps) => {
     setSubmitted(true);
 
     const requestData = {
-      input: {input: ""},
+      input: {},
       command: {resume: next_step}
     };
 

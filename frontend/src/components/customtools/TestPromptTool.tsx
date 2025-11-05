@@ -5,12 +5,10 @@ import {Textarea} from "@/components/ui/textarea";
 import {ArrowUp, MessageSquare} from "lucide-react";
 import {useState} from "react";
 import type {CustomToolProps} from "./shared";
-import {useToolCommand} from "./shared";
 
-export const TestPromptTool = ({argsText}: CustomToolProps) => {
+export const TestPromptTool = ({argsText, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
-  const {sendCommand} = useToolCommand();
 
   const result: string = JSON.parse(argsText).result;
 
@@ -19,7 +17,16 @@ export const TestPromptTool = ({argsText}: CustomToolProps) => {
 
     setSubmitted(true);
 
-    await sendCommand(feedbackText);
+    const requestData = {
+      input: {},
+      command: {resume: feedbackText}
+    };
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(requestData);
   };
 
   return (

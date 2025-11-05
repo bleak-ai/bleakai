@@ -24,7 +24,7 @@ async def stream_updates(request: Request):
     body = await request.json()
 
     # Get thread_id from request or use default
-    thread_id = body.get("thread_id", "1")
+    # thread_id = body.get("thread_id", "1")
     thread_id = "1"
     config = {"configurable": {"thread_id": thread_id}}
 
@@ -54,7 +54,7 @@ async def stream_updates(request: Request):
         )
 
     # Normal flow without resume
-    input_data = body.get("input", "")  # Fix this ASAP
+    input_data = body.get("input", "")
     # if not isinstance(input_data, dict) or "input" not in input_data:
     #     raise HTTPException(status_code=400, detail="Invalid input structure")
 

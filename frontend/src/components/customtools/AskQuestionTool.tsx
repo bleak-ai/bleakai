@@ -5,14 +5,12 @@ import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 import {Card, CardContent} from "../ui/card";
 import type {CustomToolProps} from "./shared";
-import {useToolCommand} from "./shared";
 
-export const AskQuestionTool = ({argsText}: CustomToolProps) => {
+export const AskQuestionTool = ({argsText, onCommand}: CustomToolProps) => {
   const questions: QuestionType[] = JSON.parse(argsText).questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const {sendCommand} = useToolCommand();
 
   const questionsWithoutOther = questions.map((question) => ({
     ...question,
@@ -27,7 +25,16 @@ export const AskQuestionTool = ({argsText}: CustomToolProps) => {
       (_: QuestionType, index) => answers[index] ?? ""
     );
 
-    await sendCommand(JSON.stringify(formattedAnswers));
+    const requestData = {
+      input: {},
+      command: {resume: JSON.stringify(formattedAnswers)}
+    };
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(requestData);
   };
 
   const handleAnswersChange = (newAnswers: Record<number, string>) => {
