@@ -2,6 +2,7 @@ export interface BleakaiConfig<TTool> {
   url: string;
   headers?: Record<string, string>;
   tools?: Record<string, TTool>;
+  thread_id?: string;
 }
 
 export interface StreamRequest {
@@ -35,19 +36,27 @@ export class Bleakai<TTool> {
   private endpoint: string;
   private headers: Record<string, string>;
   private tools: Record<string, TTool>;
+  private thread_id?: string;
 
   constructor(config: BleakaiConfig<TTool>) {
     this.endpoint = config.url;
     this.headers = config.headers || {};
     this.tools = config.tools || {};
+    this.thread_id = config.thread_id;
   }
 
   /** Non-streaming: waits for full response */
   async stream(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
+    // Include thread_id in the request if it exists
+    const requestWithThreadId = {
+      ...request,
+      thread_id: request.thread_id || this.thread_id
+    };
+
     const response = await fetch(this.endpoint, {
       method: "POST",
       headers: {"Content-Type": "application/json", ...this.headers},
-      body: JSON.stringify(request)
+      body: JSON.stringify(requestWithThreadId)
     });
 
     const text = await response.text();

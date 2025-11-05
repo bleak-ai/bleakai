@@ -1,4 +1,5 @@
 import json
+from http.client import HTTPException
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,8 +25,11 @@ async def stream_updates(request: Request):
     body = await request.json()
 
     # Get thread_id from request or use default
-    # thread_id = body.get("thread_id", "1")
-    thread_id = "1"
+    thread_id = body.get("thread_id", None)
+    if thread_id is None:
+        raise HTTPException(status_code=400, detail="Missing thread_id")
+
+    print("thread_id", thread_id)
     config = {"configurable": {"thread_id": thread_id}}
 
     print("body", body)
