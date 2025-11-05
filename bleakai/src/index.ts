@@ -46,6 +46,26 @@ export class Bleakai<TTool> {
     this.thread_id = config.thread_id;
   }
 
+  /** Send a message with the given input text */
+  async sendMessage(input: string): Promise<ProcessedResponse<TTool>[]> {
+    return this._request({ input });
+  }
+
+  /** Resume a previous session with the given resume data */
+  async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
+    return this._request({ input: "", command: { resume: resumeData } });
+  }
+
+  /** Retry the last request */
+  async retry(): Promise<ProcessedResponse<TTool>[]> {
+    return this._request({ input: "", retry: true });
+  }
+
+  /** Private method to handle all request types */
+  private async _request(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
+    return this.stream(request);
+  }
+
   /** Non-streaming: waits for full response */
   async stream(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
     // Include thread_id in the request if it exists

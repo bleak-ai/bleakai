@@ -1,8 +1,7 @@
 import {
   Bleakai,
   type CustomToolProps,
-  type ProcessedResponse,
-  type StreamRequest
+  type ProcessedResponse
 } from "bleakai/src";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
@@ -33,69 +32,58 @@ export default function CustomChat() {
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const bleakaiInstance = React.useMemo(
+  const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
         url: "http://localhost:8000/stream",
         tools: toolComponentMap,
-        thread_id: "chat-session-" + Date.now()
+        thread_id: `chat-session-${Date.now()}`
       }),
     []
   );
 
-  const handleInitialRequest = async () => {
-    if (!inputText.trim() || isLoading) return;
+  const appendResponse = (
+    response:
+      | ProcessedResponse<ToolComponent>
+      | ProcessedResponse<ToolComponent>[]
+  ) =>
+    setResponses((prev) => [
+      ...prev,
+      ...(Array.isArray(response) ? response : [response])
+    ]);
 
-    // Add user message to responses
-    const userMessage: ProcessedResponse<ToolComponent> = {
-      type: "message",
-      data: inputText,
-      content: inputText,
-      sender: "user"
-    };
-
-    setResponses((prev) => [...prev, userMessage]);
-    await handleStreamingRequest({input: inputText});
-    setInputText("");
-  };
-
-  const handleStreamingRequest = async (request: StreamRequest) => {
-    console.log("request", request);
+  const handleRequest = async (
+    action: () => Promise<ProcessedResponse<ToolComponent>[]>
+  ) => {
     setIsLoading(true);
-
     try {
-      // Send the request and get processed responses directly
-      const processedResponses = await bleakaiInstance.stream(request);
-
-      // Append new responses to existing ones instead of replacing
-      setResponses((prev) => [...prev, ...processedResponses]);
+      appendResponse(await action());
     } catch (error) {
-      console.error("Error handling streaming request:", error);
-      // Add error message to responses
-      const errorMessage: ProcessedResponse<ToolComponent> = {
-        type: "error",
-        data: {error: "Error: Failed to process request. Please try again."}
-      };
-      setResponses((prev) => [...prev, errorMessage]);
+      appendResponse({type: "error", data: error});
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOnCommand = async (resumeData: string) => {
-    return await handleStreamingRequest({
-      input: "",
-      command: {resume: resumeData}
+  const sendMessage = async () => {
+    if (!inputText.trim() || isLoading) return;
+
+    appendResponse({
+      type: "message",
+      data: inputText,
+      content: inputText,
+      sender: "user"
     });
+    setInputText("");
+    await handleRequest(() => bleakai.sendMessage(inputText));
+  };
+
+  const handleOnCommand = async (resumeData: string) => {
+    handleRequest(() => bleakai.resume(resumeData));
   };
 
   const handleRetry = async () => {
-    setIsLoading(true);
-    await handleStreamingRequest({
-      input: "",
-      retry: true
-    });
-    setIsLoading(false);
+    handleRequest(() => bleakai.retry());
   };
 
   return (
@@ -237,12 +225,12 @@ export default function CustomChat() {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Write a prompt to optimize..."
-          onKeyDown={(e) => e.key === "Enter" && handleInitialRequest()}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           disabled={isLoading}
           className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-full text-base outline-none transition-all duration-200 focus:border-blue-500 focus:shadow-blue-100 focus:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
         />
         <button
-          onClick={handleInitialRequest}
+          onClick={sendMessage}
           disabled={isLoading || !inputText.trim()}
           className="px-6 py-3 bg-blue-500 text-white border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-200 hover:bg-blue-600 active:scale-95 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:transform-none"
         >
