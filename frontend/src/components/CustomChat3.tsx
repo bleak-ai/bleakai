@@ -1,39 +1,63 @@
-import {Bleakai} from "bleakai";
+import {Bleakai, type ProcessedResponse} from "bleakai";
 import React from "react";
+import {CreatePromptTool} from "./customtools/CreatePromptTool";
 
 // Example tool class for demonstration
 
+const tools = {
+  create_prompt_tool: CreatePromptTool
+  // evaluate_prompt_tool: EvaluatePromptTool,
+  // test_prompt_tool: TestPromptTool,
+  // suggest_improvements_tool: SuggestImprovementsTool,
+  // ask_questions_tool: AskQuestionTool
+};
+
 export default function CustomChat3() {
-  // Initialize with your backend configuration
+  const [inputText, setInputText] = React.useState("");
+  const [responses, setResponses] = React.useState<ProcessedResponse[]>([]);
   const bleakaiInstance = new Bleakai({
     url: "http://localhost:8000/stream",
-    headers: {"Content-Type": "application/json"} // Optional headers
-    // toolRegistry: {
-    //   ask_questions: AskQuestions, // Register available tools
-    //   // Add other tools as needed
-    // }
+    headers: {"Content-Type": "application/json"}
   });
 
-  console.log("Bleakai instance initialized:", {
-    url: bleakaiInstance.getUrl(),
-    headers: bleakaiInstance.getHeaders(),
-    tools: Object.keys(bleakaiInstance.getToolRegistry())
-  });
-
-  React.useEffect(() => {
-    async function handleStream() {
-      const response = await bleakaiInstance.stream();
-
-      console.log("Stream response:", response);
-    }
-
-    handleStream();
-  });
+  const handleStream = async () => {
+    if (!inputText.trim()) return;
+    const response = await bleakaiInstance.stream({
+      input: inputText
+    });
+    console.log("Stream response:", response);
+    setResponses(response);
+    setInputText(""); // Clear input after submission
+  };
 
   return (
     <div>
       <h2>CustomChat3 - Bleakai Instance</h2>
-      <p>Check console for Bleakai initialization details</p>
+      <input
+        type="text"
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Enter text..."
+        style={{marginRight: "8px", padding: "4px"}}
+      />
+      <button onClick={handleStream}>ok</button>
+      <p>Check console for Bleakai stream response</p>
+
+      {responses.map((response, index) => {
+        console.log("response", response);
+        const ToolComponent = tools[response.toolName ?? ""];
+        console.log("ToolComponent", ToolComponent);
+        if (!ToolComponent) {
+          return <span> Tool not found: {response.toolName}</span>;
+        }
+        return (
+          <ToolComponent
+            key={index}
+            argsText={JSON.stringify(response.args)}
+            onCommand={() => console.log("handlecommand")}
+          />
+        );
+      })}
     </div>
   );
 }
