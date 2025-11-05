@@ -2,21 +2,27 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
-import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
+import type {CustomToolProps} from "bleakai";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
 
-export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
-  const sendCommand = useLangGraphSendCommand();
+export const CreatePromptTool = ({args, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  // const {sendCommand, isLoading} = useToolCommand();
 
-  const prompt: string = JSON.parse(argsText).prompt;
+  const prompt: string = args.prompt;
 
-  const handleSubmit = (next_step: "questions" | "test" | "evaluate") => {
+  const handleSubmit = async (next_step: "questions" | "test" | "evaluate") => {
+    if (submitted) return;
+
     setSubmitted(true);
-    sendCommand({resume: next_step});
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(next_step);
   };
 
   const handleCopy = () => {
@@ -26,12 +32,9 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
   };
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <Card className="border-0 bg-white shadow-sm overflow-hidden">
-        {/* <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
-          Prompt
-        </CardHeader> */}
-        <CardContent className="space-y-2 px-8 pb-2">
+    <div className="custom-tool-root">
+      <Card className="custom-tool-card">
+        <CardContent className="custom-tool-content">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xl font-semibold">Prompt </span>
@@ -74,7 +77,7 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
                   size="lg"
                 >
                   <BarChart3 className="h-4 w-4" />
-                  Evaluate
+                  Evaluate{" "}
                 </Button>
                 <Button
                   onClick={() => handleSubmit("test")}
@@ -82,9 +85,14 @@ export const CreatePromptTool: ToolCallMessagePartComponent = ({argsText}) => {
                   size="lg"
                 >
                   <Play className="h-4 w-4" />
-                  Test Prompt
+                  Test Prompt{" "}
                 </Button>
               </>
+            )}
+            {submitted && (
+              <div className="flex-1 text-center text-gray-600 text-sm">
+                Request submitted. Results will appear below.
+              </div>
             )}
           </div>
         </CardContent>

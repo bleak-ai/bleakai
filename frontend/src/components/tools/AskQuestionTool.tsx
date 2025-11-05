@@ -1,16 +1,13 @@
 "use client";
 
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
-import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
+import type {CustomToolProps} from "bleakai";
 import {useState} from "react";
 import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 import {Card, CardContent} from "../ui/card";
 
-export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
-  const sendCommand = useLangGraphSendCommand();
-
-  const questions: QuestionType[] = JSON.parse(argsText).questions;
+export const AskQuestionTool = ({args, onCommand}: CustomToolProps) => {
+  const questions: QuestionType[] = args.questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -20,12 +17,19 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
     options: question.options?.filter((option) => option !== "Other")
   }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submitted) return;
+
     setSubmitted(true);
     const formattedAnswers: string[] = questionsWithoutOther.map(
       (_: QuestionType, index) => answers[index] ?? ""
     );
-    sendCommand({resume: JSON.stringify(formattedAnswers)});
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(JSON.stringify(formattedAnswers));
   };
 
   const handleAnswersChange = (newAnswers: Record<number, string>) => {
@@ -33,8 +37,8 @@ export const AskQuestionTool: ToolCallMessagePartComponent = ({argsText}) => {
   };
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <Card className="border-primary/20 bg-gradient-to-br from-card to-card/50">
+    <div className="custom-tool-root">
+      <Card className="custom-tool-card border-primary/20 bg-gradient-to-br from-card to-card/50">
         {/* <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">

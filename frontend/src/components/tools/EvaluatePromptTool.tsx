@@ -2,23 +2,26 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
-import {useLangGraphSendCommand} from "@assistant-ui/react-langgraph";
+import type {CustomToolProps} from "bleakai";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
 
-export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
-  argsText
-}) => {
-  const sendCommand = useLangGraphSendCommand();
+export const EvaluatePromptTool = ({args, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
 
-  const completionLevel = parseInt(JSON.parse(argsText).evaluation);
-  const missingInfo = JSON.parse(argsText).missing_info;
+  const completionLevel = parseInt(args.evaluation);
+  const missingInfo = args.missing_info;
 
-  const handleSubmit = (next_step: "questions" | "test") => {
+  const handleSubmit = async (next_step: "questions" | "test") => {
+    if (submitted) return;
+
     setSubmitted(true);
-    sendCommand({resume: next_step});
+
+    if (!onCommand) {
+      throw new Error("onCommand is not defined");
+    }
+
+    await onCommand(next_step);
   };
 
   const percentage = (completionLevel / 6) * 100;
@@ -39,12 +42,9 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
   const StatusIcon = status.icon;
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <Card className="border-0 bg-white shadow-sm overflow-hidden">
-        {/* <CardHeader className="text-XL font-semibold text-slate-500 uppercase tracking-widest">
-          Prompt
-        </CardHeader> */}
-        <CardContent className="space-y-2 px-8 pb-2">
+    <div className="custom-tool-root">
+      <Card className="custom-tool-card">
+        <CardContent className="custom-tool-content">
           <div className="w-full  mx-auto p-6 bg-card rounded-lg border border-border">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -105,10 +105,8 @@ export const EvaluatePromptTool: ToolCallMessagePartComponent = ({
                 </Button>
               </>
             ) : (
-              <div className="flex items-center justify-center w-full gap-2 py-2">
-                <p className="text-sm text-slate-500 font-medium">
-                  Processing...
-                </p>
+              <div className="flex-1 text-center text-gray-600 text-sm">
+                Request submitted. Results will appear below.
               </div>
             )}
           </div>

@@ -1,14 +1,14 @@
-import type {ToolCallMessagePartComponent} from "@assistant-ui/react";
+"use client";
+
+import type {CustomToolProps} from "bleakai";
 import {Lightbulb} from "lucide-react";
 
-export const SuggestImprovementsTool: ToolCallMessagePartComponent = ({
-  argsText
-}) => {
-  const {improvements} = JSON.parse(argsText);
+export const SuggestImprovementsTool = ({args}: CustomToolProps) => {
+  const {improvements} = args;
 
   return (
-    <div className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-200 fade-in slide-in-from-bottom-1">
-      <div className="rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div className="custom-tool-root">
+      <div className="custom-tool-card rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
         <div className="border-b border-border/30 px-4 py-3">
           <div className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-primary" />
