@@ -33,11 +33,18 @@ async def stream_updates(request: Request):
     config = {"configurable": {"thread_id": thread_id}}
     print("body", body)
 
-    # Determine input based on whether we're resuming or starting fresh
+    # Determine input based on request type
     command_data = body.get("command")
-    if command_data and "resume" in command_data:
+    retry_flag = body.get("retry", False)
+
+    if retry_flag:
+        # Restart: resume from checkpoint without new input
+        graph_input = None
+    elif command_data and "resume" in command_data:
+        # Resume with updated value from interrupt
         graph_input = Command(resume=command_data["resume"])
     else:
+        # Start fresh
         input_data = body.get("input", "")
         message = {"content": input_data, "type": "human"}
         print("message", message)

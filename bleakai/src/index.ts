@@ -11,6 +11,7 @@ export interface StreamRequest {
     resume?: string;
   };
   thread_id?: string;
+  retry?: boolean;
 }
 
 export interface CustomToolProps {

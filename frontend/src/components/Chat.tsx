@@ -11,6 +11,7 @@ import {CreatePromptTool} from "./tools/CreatePromptTool";
 import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
 import {SuggestImprovementsTool} from "./tools/SuggestImprovementsTool";
 import {TestPromptTool} from "./tools/TestPromptTool";
+import {Button} from "./ui/button";
 
 // Example tool class for demonstration
 
@@ -65,7 +66,9 @@ export default function CustomChat() {
 
     try {
       // Send the request and get processed responses directly
-      const processedResponses = await bleakaiInstanceRef.current.stream(request);
+      const processedResponses = await bleakaiInstanceRef.current.stream(
+        request
+      );
 
       console.log("processedResponses", processedResponses);
 
@@ -76,7 +79,7 @@ export default function CustomChat() {
       // Add error message to responses
       const errorMessage: ProcessedResponse<ToolComponent> = {
         type: "error",
-        data: { error: "Error: Failed to process request. Please try again." }
+        data: {error: "Error: Failed to process request. Please try again."}
       };
       setResponses((prev) => [...prev, errorMessage]);
     } finally {
@@ -89,6 +92,15 @@ export default function CustomChat() {
       input: "",
       command: {resume: resumeData}
     });
+  };
+
+  const handleRetry = async () => {
+    setIsLoading(true);
+    await handleStreamingRequest({
+      input: "",
+      retry: true
+    });
+    setIsLoading(false);
   };
 
   return (
@@ -140,7 +152,7 @@ export default function CustomChat() {
             return (
               <div
                 key={index}
-                className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
+                className="flex items-center  justify-center gap-4 w-full p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
                   <div className="font-semibold text-red-700 mb-1">Error:</div>
@@ -149,6 +161,7 @@ export default function CustomChat() {
                     response.data?.toString() ||
                     "Unknown error occurred"}
                 </div>
+                <Button onClick={handleRetry}> Retry </Button>
               </div>
             );
           }
