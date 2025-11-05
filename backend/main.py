@@ -31,45 +31,24 @@ async def stream_updates(request: Request):
 
     print("thread_id", thread_id)
     config = {"configurable": {"thread_id": thread_id}}
-
     print("body", body)
 
-    # Check if request has command and resume values
+    # Determine input based on whether we're resuming or starting fresh
     command_data = body.get("command")
     if command_data and "resume" in command_data:
-        # Resume the graph with the specified command
-        resume_command = command_data["resume"]
+        graph_input = Command(resume=command_data["resume"])
+    else:
+        input_data = body.get("input", "")
+        message = {"content": input_data, "type": "human"}
+        print("message", message)
+        graph_input = {"messages": [message]}
 
-        async def event_generator():
-            updates = []
-            async for update in graph.astream(
-                Command(resume=resume_command),
-                config,
-                stream_mode="updates",
-            ):
-                updates.append(dumpd(update))
-
-            yield json.dumps(updates)
-
-        return StreamingResponse(
-            event_generator(),
-            media_type="application/x-ndjson",
-            headers={"Cache-Control": "no-cache"},
-        )
-
-    # Normal flow without resume
-    input_data = body.get("input", "")
-    # if not isinstance(input_data, dict) or "input" not in input_data:
-    #     raise HTTPException(status_code=400, detail="Invalid input structure")
-
-    message = {"content": input_data, "type": "human"}
-    print("message", message)
-
+    # Single event generator for both cases
     async def event_generator():
         updates = []
         async for update in graph.astream(
-            {"messages": [message]},  # input
-            config,  # pass config here with thread_id
+            graph_input,
+            config,
             stream_mode="updates",
         ):
             updates.append(dumpd(update))
