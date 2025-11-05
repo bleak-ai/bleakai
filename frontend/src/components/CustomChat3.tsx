@@ -88,7 +88,7 @@ export default function CustomChat3() {
 
       {responses.map((response, index) => {
         if (response.type !== "tool_call") {
-          return <pre key={index}>No tool call</pre>;
+          return <pre key={index}>No tool call: {response.type}</pre>;
         }
 
         // `response.tool` is now correctly typed as `ToolComponent | undefined`

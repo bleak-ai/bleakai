@@ -88,6 +88,11 @@ export class Bleakai<TTool> {
     const messages = content?.messages ?? [];
 
     try {
+      // Ensure messages is an array before calling flatMap
+      if (!Array.isArray(messages)) {
+        return [];
+      }
+
       return messages.flatMap((msg: any) => {
         const calls = msg?.kwargs?.tool_calls ?? msg?.tool_calls ?? [];
         return calls
@@ -102,6 +107,7 @@ export class Bleakai<TTool> {
       return [];
     }
   }
+
   private createMessageResponse(raw: any, data: any): ProcessedResponse<TTool> {
     // Note the explicit return type
     return {type: "message", data, rawResponse: raw};
