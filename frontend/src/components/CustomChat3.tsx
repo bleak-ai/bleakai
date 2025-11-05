@@ -3,7 +3,7 @@ import {
   type CustomToolProps,
   type ProcessedResponse,
   type StreamRequest
-} from "bleakai";
+} from "../../../bleakai/src/index";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
 import {AskQuestionTool} from "./customtools/AskQuestionTool";
@@ -99,7 +99,8 @@ export default function CustomChat3() {
                 className="flex items-start p-3 rounded-xl max-w-full bg-blue-50 self-end rounded-br-sm animate-slide-in"
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
-                  No tool
+                  <div className="font-semibold text-blue-700 mb-1">User Message:</div>
+                  <pre>{response.content || JSON.stringify(response.data, null, 2)}</pre>
                 </div>
               </div>
             );
@@ -112,7 +113,22 @@ export default function CustomChat3() {
                 className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
-                  {response.data}
+                  <div className="font-semibold text-red-700 mb-1">Error:</div>
+                  {response.error?.toString() || response.data || "Unknown error occurred"}
+                </div>
+              </div>
+            );
+          }
+
+          if (response.type === "other") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-gray-50 border border-gray-200 self-start animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  <div className="font-semibold text-gray-700 mb-1">System Message:</div>
+                  <pre>{JSON.stringify(response.data, null, 2)}</pre>
                 </div>
               </div>
             );
@@ -125,7 +141,7 @@ export default function CustomChat3() {
                 className="flex items-start p-3 rounded-xl max-w-full bg-yellow-50 self-center border border-yellow-200 animate-slide-in"
               >
                 <div className="flex-1 text-slate-700 leading-6 break-words">
-                  <em>No tool call: {response.type}</em>
+                  <em>Unknown response type: {response.type}</em>
                 </div>
               </div>
             );

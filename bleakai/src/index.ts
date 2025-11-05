@@ -17,14 +17,17 @@ export interface CustomToolProps {
   onCommand: (resumeData: string) => Promise<void>;
 }
 
+export type ResponseType = "tool_call" | "message" | "error" | "other";
+
 export interface ProcessedResponse<TTool> {
-  type: "tool_call" | "message" | "error" | "unknown";
+  type: ResponseType;
   toolName?: string;
   args?: any;
   data?: any;
   error?: any;
   rawResponse?: any;
   tool?: TTool;
+  content?: string;
 }
 export class Bleakai<TTool> {
   private endpoint: string;
@@ -69,30 +72,54 @@ export class Bleakai<TTool> {
   }
 
   private parseResponse(response: any): ProcessedResponse<TTool> | null {
-    const key = Object.keys(response)[0];
-    const content = response[key];
-    const toolCalls = this.extractToolCalls(content);
+    // 1️⃣ Extract the top-level key and content safely
+    const key = Object.keys(response ?? {})[0];
+    const content = response?.[key];
 
-    if (toolCalls.length === 0) {
-      return this.createMessageResponse(response, content);
+    if (!content) {
+      console.warn("parseResponse: Missing or invalid content:", response);
+      return null;
     }
 
-    const {name, args} = toolCalls[0];
-    // Look up the generic tool from the registered tools
-    const tool = this.tools[name];
+    try {
+      // 2️⃣ Extract possible data
+      const toolCalls = this.extractToolCalls(content);
 
-    return this.createToolCallResponse(response, content, name, args, tool);
+      // 3️⃣ Handle tool call responses
+      if (toolCalls.length > 0) {
+        const {name, args} = toolCalls[0];
+        const tool = this.tools?.[name];
+        return this.createToolCallResponse(response, content, name, args, tool);
+      }
+
+      const messageContent = this.extractContent(content);
+
+      // 4️⃣ Handle message responses
+      if (messageContent) {
+        return this.createMessageResponse(response, content, messageContent);
+      }
+
+      // 5️⃣ Handle unrecognized responses
+      return this.createOtherResponse(response, content);
+    } catch (error) {
+      console.error("parseResponse: Error while processing response:", error);
+      return this.createErrorResponse(response, error);
+    }
   }
 
+  /**
+   * Extracts tool calls from response content
+   * @param content - The response content containing messages
+   * @returns Array of tool calls with name and args
+   */
   private extractToolCalls(content: any): {name: string; args: any}[] {
     const messages = content?.messages ?? [];
 
-    try {
-      // Ensure messages is an array before calling flatMap
-      if (!Array.isArray(messages)) {
-        return [];
-      }
+    if (!Array.isArray(messages)) {
+      return [];
+    }
 
+    try {
       return messages.flatMap((msg: any) => {
         const calls = msg?.kwargs?.tool_calls ?? msg?.tool_calls ?? [];
         return calls
@@ -108,9 +135,49 @@ export class Bleakai<TTool> {
     }
   }
 
-  private createMessageResponse(raw: any, data: any): ProcessedResponse<TTool> {
-    // Note the explicit return type
-    return {type: "message", data, rawResponse: raw};
+  /**
+   * Extracts content from response messages
+   * @param content - The response content containing messages
+   * @returns Extracted content string or null if not found
+   */
+  private extractContent(content: any): string | null {
+    const rawMessages = content?.messages;
+    const messages = Array.isArray(rawMessages)
+      ? rawMessages
+      : Array.isArray(rawMessages?.value)
+      ? rawMessages.value
+      : [];
+
+    if (!Array.isArray(messages)) return null;
+
+    try {
+      for (const msg of messages) {
+        const extractedContent = msg?.kwargs?.content ?? msg?.content;
+        if (typeof extractedContent === "string" && extractedContent.trim()) {
+          return extractedContent.trim();
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error("Error extracting content:", err);
+      return null;
+    }
+  }
+
+  private createMessageResponse(
+    raw: any,
+    data: any,
+    content: string
+  ): ProcessedResponse<TTool> {
+    return {type: "message", data, content, rawResponse: raw};
+  }
+
+  private createOtherResponse(raw: any, data: any): ProcessedResponse<TTool> {
+    return {type: "other", data, rawResponse: raw};
+  }
+
+  private createErrorResponse(raw: any, error: any): ProcessedResponse<TTool> {
+    return {type: "error", error, rawResponse: raw};
   }
 
   private createToolCallResponse(
