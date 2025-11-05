@@ -1,7 +1,7 @@
 import {Route, Routes} from "react-router-dom";
 import "./App.css";
 import Chat from "./components/Chat";
-import CustomChat3 from "./components/CustomChat3";
+import CustomChat from "./components/CustomChat";
 import Header from "./components/Header";
 import Home from "./components/home/Home";
 import {ThreadProvider} from "./contexts/ThreadContext";
@@ -18,7 +18,7 @@ function App() {
             path="/prompt-tester"
             element={<Chat assistantKey="prompt-tester" />}
           /> */}
-          <Route path="/prompt-tester" element={<CustomChat3 />} />
+          <Route path="/prompt-tester" element={<CustomChat />} />
         </Routes>
       </main>
 

@@ -1,221 +1,238 @@
-import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Input} from "@/components/ui/input";
+import type {ComponentType} from "react"; // <-- Import React-specific types here
+import React from "react";
 import {
-  defaultStreamProcessor,
-  streamUtils,
-  type ProcessedResponse
-} from "@/services/StreamProcessingService";
-import {
-  defaultToolRegistry,
-  toolRegistryUtils
-} from "@/services/ToolRegistryService";
-import {
-  createNewThread,
-  getCurrentThreadId,
-  sendStreamRequestAsync,
+  Bleakai,
+  type CustomToolProps,
+  type ProcessedResponse,
   type StreamRequest
-} from "@/utils/api";
-import {createContext, useContext, useEffect, useState} from "react";
+} from "../../../bleakai/src/index";
 import {AskQuestionTool} from "./customtools/AskQuestionTool";
 import {CreatePromptTool} from "./customtools/CreatePromptTool";
 import {EvaluatePromptTool} from "./customtools/EvaluatePromptTool";
 import {SuggestImprovementsTool} from "./customtools/SuggestImprovementsTool";
 import {TestPromptTool} from "./customtools/TestPromptTool";
 
-// Context to provide streaming callback to tools
-export const StreamingContext = createContext<{
-  handleStreamRequest: ((request: StreamRequest) => Promise<void>) | null;
-}>({
-  handleStreamRequest: null
-});
+// Example tool class for demonstration
 
-// Hook to use streaming context
-export const useStreaming = () => {
-  const context = useContext(StreamingContext);
-  if (!context) {
-    throw new Error("useStreaming must be used within a StreamingProvider");
-  }
-  return context;
+const toolComponentMap: Record<string, ToolComponent> = {
+  create_prompt_tool: CreatePromptTool,
+  evaluate_prompt_tool: EvaluatePromptTool,
+  test_prompt_tool: TestPromptTool,
+  suggest_improvements_tool: SuggestImprovementsTool,
+  ask_questions_tool: AskQuestionTool
 };
 
+// 2. Define the specific type for your tool. This will be used as the generic parameter.
+type ToolComponent = ComponentType<CustomToolProps>;
+
 export default function CustomChat() {
-  const [message, setMessage] = useState("");
-  const [output, setOutput] = useState<React.ReactNode[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [inputText, setInputText] = React.useState("");
+  const [responses, setResponses] = React.useState<
+    ProcessedResponse<ToolComponent>[]
+  >([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const bleakaiInstance = new Bleakai<ToolComponent>({
+    url: "http://localhost:8000/stream",
+    tools: toolComponentMap // The config now matches BleakaiConfig<ToolComponent>
+  });
 
-  // Initialize thread ID on component mount
-  useEffect(() => {
-    const existingThreadId = getCurrentThreadId();
-    if (existingThreadId) {
-      setCurrentThreadId(existingThreadId);
-    } else {
-      const newThreadId = createNewThread();
-      setCurrentThreadId(newThreadId);
-    }
+  const handleInitialRequest = async () => {
+    if (!inputText.trim() || isLoading) return;
 
-    // Register tools with the registry
-    registerTools();
-  }, []);
+    // Add user message to responses
+    const userMessage: ProcessedResponse<ToolComponent> = {
+      type: "message",
+      data: inputText,
+      content: inputText,
+      sender: "user"
+    };
 
-  // Register available tools
-  const registerTools = () => {
-    const tools = [
-      toolRegistryUtils.createToolConfig(
-        "create_prompt_tool",
-        CreatePromptTool
-      ),
-      toolRegistryUtils.createToolConfig(
-        "evaluate_prompt_tool",
-        EvaluatePromptTool
-      ),
-      toolRegistryUtils.createToolConfig("test_prompt_tool", TestPromptTool),
-      toolRegistryUtils.createToolConfig(
-        "suggest_improvements_tool",
-        SuggestImprovementsTool
-      ),
-      toolRegistryUtils.createToolConfig("ask_questions_tool", AskQuestionTool)
-    ];
-
-    toolRegistryUtils.registerTools(tools);
+    setResponses((prev) => [...prev, userMessage]);
+    await handleStreamingRequest({input: inputText});
+    setInputText("");
   };
 
-  // Process validated responses and render appropriate components
-  const handleProcessedResponse = (response: ProcessedResponse) => {
-    if (streamUtils.isToolCall(response)) {
-      console.log("cleaned response", response);
-      const toolComponent = defaultToolRegistry.getToolComponent(
-        response.toolName
-      );
-
-      if (toolComponent) {
-        // Record tool usage
-        defaultToolRegistry.recordToolUsage(response.toolName);
-
-        // Create the tool component with args
-        const ToolComponent = toolComponent;
-        const itemToRender = (
-          <ToolComponent argsText={JSON.stringify(response.args)} />
-        );
-
-        setOutput((prev) => [...prev, itemToRender]);
-      } else {
-        console.warn(`No component registered for tool: ${response.toolName}`);
-      }
-    } else if (streamUtils.isError(response)) {
-      const errorMessage = streamUtils.getErrorMessage(response.error);
-      const errorComponent = (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error</h3>
-          <p className="text-red-600 text-sm">{errorMessage}</p>
-        </div>
-      );
-      setOutput((prev) => [...prev, errorComponent]);
-    }
-    // Regular messages are currently not rendered, but could be added here
-  };
-
-  // Handle validation errors
-  const handleValidationError = (error: any) => {
-    const errorComponent = (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <h3 className="text-red-800 font-semibold">Stream Processing Error</h3>
-        <p className="text-red-600 text-sm">
-          {error?.message ||
-            "An unknown error occurred while processing the stream"}
-        </p>
-      </div>
-    );
-    setOutput((prev) => [...prev, errorComponent]);
-  };
-
-  // Centralized streaming request wrapper using async/await pattern
   const handleStreamingRequest = async (request: StreamRequest) => {
+    console.log("request", request);
     setIsLoading(true);
 
     try {
-      // Process the stream using async iteration
-      for await (const chunk of sendStreamRequestAsync(request)) {
-        // Process the chunk for tool calls and other events
-        console.log("chunk", chunk);
-        const processedResponses =
-          defaultStreamProcessor.processResponse(chunk);
-        for (const response of processedResponses) {
-          console.log("response", response);
-          if (streamUtils.isToolCall(response)) {
-            handleProcessedResponse(response);
-          } else if (streamUtils.isError(response)) {
-            handleValidationError(response.error);
-          }
-        }
-      }
+      // Send the request and get processed responses directly
+      const processedResponses = await bleakaiInstance.stream(request);
+
+      console.log("processedResponses", processedResponses);
+
+      // Append new responses to existing ones instead of replacing
+      setResponses((prev) => [...prev, ...processedResponses]);
     } catch (error) {
-      console.error("Streaming request failed:", error);
-      handleValidationError(error);
+      console.error("Error handling streaming request:", error);
+      // Add error message to responses
+      const errorMessage: ProcessedResponse<ToolComponent> = {
+        type: "error",
+        data: "Error: Failed to process request. Please try again."
+      };
+      setResponses((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleNewThread = () => {
-    const newThreadId = createNewThread();
-    setCurrentThreadId(newThreadId);
-    setOutput([]);
+  const handleOnCommand = async (resumeData: string) => {
+    return await handleStreamingRequest({
+      input: "",
+      command: {resume: resumeData}
+    });
   };
 
-  async function send() {
-    if (!message.trim()) return;
-
-    setOutput([]);
-
-    await handleStreamingRequest({
-      input: message
-    });
-  }
-
   return (
-    <StreamingContext.Provider
-      value={{handleStreamRequest: handleStreamingRequest}}
-    >
-      <Card className="w-full max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle>LangGraph Stream Demo (Centralized)</CardTitle>
-          {currentThreadId && (
-            <div className="text-sm text-muted-foreground">
-              Thread ID:{" "}
-              <code className="bg-muted px-1 rounded">{currentThreadId}</code>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              id="msg"
-              placeholder="Type a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && send()}
-              disabled={isLoading}
-            />
-            <Button onClick={send} disabled={isLoading || !message.trim()}>
-              {isLoading ? "Sending..." : "Send"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleNewThread}
-              disabled={isLoading}
+    <div className="max-w-4xl mx-auto min-h-[50vh] flex flex-col font-sans">
+      <div className="p-5 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <h2 className="m-0 text-slate-700 text-2xl font-semibold">
+          Prompt Optimization Agent
+        </h2>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white">
+        {responses.map((response, index) => {
+          if (response.type === "message") {
+            const isUserMessage = response.sender === "user";
+            const isAiMessage = response.sender === "ai";
+
+            return (
+              <div
+                key={index}
+                className={`flex items-start p-3 rounded-xl max-w-full animate-slide-in ${
+                  isUserMessage
+                    ? "bg-blue-50 self-end rounded-br-sm"
+                    : isAiMessage
+                    ? "bg-green-50 self-start rounded-bl-sm"
+                    : "bg-gray-50 self-start"
+                }`}
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  <div
+                    className={`font-semibold mb-1 ${
+                      isUserMessage
+                        ? "text-blue-700"
+                        : isAiMessage
+                        ? "text-green-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {isUserMessage ? "You:" : isAiMessage ? "AI:" : "Message:"}
+                  </div>
+                  <pre>
+                    {response.content || JSON.stringify(response.data, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            );
+          }
+
+          if (response.type === "error") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  <div className="font-semibold text-red-700 mb-1">Error:</div>
+                  {response.error?.toString() ||
+                    response.data ||
+                    "Unknown error occurred"}
+                </div>
+              </div>
+            );
+          }
+
+          if (response.type === "other") {
+            // return (
+            //   <div
+            //     key={index}
+            //     className="flex items-start p-3 rounded-xl max-w-full bg-gray-50 border border-gray-200 self-start animate-slide-in"
+            //   >
+            //     <div className="flex-1 text-slate-700 leading-6 break-words">
+            //       <div className="font-semibold text-gray-700 mb-1">System Message:</div>
+            //       <pre>{JSON.stringify(response.data, null, 2)}</pre>
+            //     </div>
+            //   </div>
+            // );
+            return null;
+          }
+
+          if (response.type !== "tool_call") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-yellow-50 self-center border border-yellow-200 animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  <em>Unknown response type: {response.type}</em>
+                </div>
+              </div>
+            );
+          }
+
+          // `response.tool` is now correctly typed as `ToolComponent | undefined`
+          const ToolComponent = response.tool;
+
+          if (!ToolComponent) {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  Tool component not found for: {response.toolName}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={index}
+              className="self-start w-full animate-slide-in mb-4"
             >
-              New Thread
-            </Button>
+              <ToolComponent
+                args={response.args} // Remember to update your tools to accept `args` object
+                onCommand={handleOnCommand}
+              />
+            </div>
+          );
+        })}
+
+        {isLoading && (
+          <div className="flex items-start p-3 rounded-xl max-w-full bg-gray-100 self-start rounded-bl-sm animate-slide-in">
+            <div className="flex-1 text-slate-700 leading-6 break-words">
+              <div className="flex gap-1 items-center">
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-1"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-2"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-3"></span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-4">
-            {output.map((item, index) => (
-              <div key={index}>{item}</div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </StreamingContext.Provider>
+        )}
+      </div>
+
+      <div className="flex gap-3 p-5 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Write a prompt to optimize..."
+          onKeyDown={(e) => e.key === "Enter" && handleInitialRequest()}
+          disabled={isLoading}
+          className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-full text-base outline-none transition-all duration-200 focus:border-blue-500 focus:shadow-blue-100 focus:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        <button
+          onClick={handleInitialRequest}
+          disabled={isLoading || !inputText.trim()}
+          className="px-6 py-3 bg-blue-500 text-white border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-200 hover:bg-blue-600 active:scale-95 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {isLoading ? "Sending..." : "Send"}
+        </button>
+      </div>
+    </div>
   );
 }
