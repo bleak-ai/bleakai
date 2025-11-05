@@ -1,10 +1,10 @@
 "use client";
 
+import type {CustomToolProps} from "bleakai";
 import {Lightbulb} from "lucide-react";
-import type {CustomToolProps} from "./shared";
 
-export const SuggestImprovementsTool = ({argsText}: CustomToolProps) => {
-  const {improvements} = JSON.parse(argsText);
+export const SuggestImprovementsTool = ({args}: CustomToolProps) => {
+  const {improvements} = args;
 
   return (
     <div className="custom-tool-root">

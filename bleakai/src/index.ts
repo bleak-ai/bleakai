@@ -1,7 +1,7 @@
-export interface BleakaiConfig {
+export interface BleakaiConfig<TTool> {
   url: string;
   headers?: Record<string, string>;
-  toolRegistry?: Record<string, any>;
+  tools?: Record<string, TTool>;
 }
 
 export interface StreamRequest {
@@ -12,28 +12,33 @@ export interface StreamRequest {
   thread_id?: string;
 }
 
-export interface ProcessedResponse {
+export interface CustomToolProps {
+  args: any;
+  onCommand: (resumeData: string) => Promise<void>;
+}
+
+export interface ProcessedResponse<TTool> {
   type: "tool_call" | "message" | "error" | "unknown";
   toolName?: string;
   args?: any;
   data?: any;
   error?: any;
   rawResponse?: any;
+  tool?: TTool;
 }
-
-export class Bleakai {
+export class Bleakai<TTool> {
   private endpoint: string;
   private headers: Record<string, string>;
-  private toolRegistry: Record<string, any>;
+  private tools: Record<string, TTool>;
 
-  constructor(config: BleakaiConfig) {
+  constructor(config: BleakaiConfig<TTool>) {
     this.endpoint = config.url;
     this.headers = config.headers || {};
-    this.toolRegistry = config.toolRegistry || {};
+    this.tools = config.tools || {};
   }
 
   /** Non-streaming: waits for full response */
-  async stream(request: StreamRequest): Promise<ProcessedResponse[]> {
+  async stream(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
     const response = await fetch(this.endpoint, {
       method: "POST",
       headers: {"Content-Type": "application/json", ...this.headers},
@@ -48,7 +53,7 @@ export class Bleakai {
   // Shared internal utilities
   // -------------------------------
 
-  private processChunk(chunk: string): ProcessedResponse[] {
+  private processChunk(chunk: string): ProcessedResponse<TTool>[] {
     let data;
     try {
       data = JSON.parse(chunk);
@@ -60,10 +65,10 @@ export class Bleakai {
     const items = Array.isArray(data) ? data : [data];
     return items
       .map((item) => this.parseResponse(item))
-      .filter(Boolean) as ProcessedResponse[];
+      .filter(Boolean) as ProcessedResponse<TTool>[];
   }
 
-  private parseResponse(response: any): ProcessedResponse | null {
+  private parseResponse(response: any): ProcessedResponse<TTool> | null {
     const key = Object.keys(response)[0];
     const content = response[key];
     const toolCalls = this.extractToolCalls(content);
@@ -73,7 +78,10 @@ export class Bleakai {
     }
 
     const {name, args} = toolCalls[0];
-    return this.createToolCallResponse(response, content, name, args);
+    // Look up the generic tool from the registered tools
+    const tool = this.tools[name];
+
+    return this.createToolCallResponse(response, content, name, args, tool);
   }
 
   private extractToolCalls(content: any): {name: string; args: any}[] {
@@ -94,8 +102,8 @@ export class Bleakai {
       return [];
     }
   }
-
-  private createMessageResponse(raw: any, data: any): ProcessedResponse {
+  private createMessageResponse(raw: any, data: any): ProcessedResponse<TTool> {
+    // Note the explicit return type
     return {type: "message", data, rawResponse: raw};
   }
 
@@ -103,8 +111,9 @@ export class Bleakai {
     raw: any,
     data: any,
     toolName: string,
-    args: any
-  ): ProcessedResponse {
-    return {type: "tool_call", toolName, args, data, rawResponse: raw};
+    args: any,
+    tool?: TTool // <-- Accepts the generic tool
+  ): ProcessedResponse<TTool> {
+    return {type: "tool_call", toolName, args, data, rawResponse: raw, tool};
   }
 }

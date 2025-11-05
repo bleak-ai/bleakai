@@ -4,29 +4,30 @@ import {Button} from "@/components/ui/button";
 import {Textarea} from "@/components/ui/textarea";
 import {ArrowUp, MessageSquare} from "lucide-react";
 import {useState} from "react";
-import type {CustomToolProps} from "./shared";
 
-export const TestPromptTool = ({argsText, onCommand}: CustomToolProps) => {
+// 1. Import the updated props interface
+import type {CustomToolProps} from "bleakai"; // Assuming bleakai is aliased or path is correct
+
+// 2. Change the function signature to destructure `args` instead of `argsText`
+export const TestPromptTool = ({args, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
 
-  const result: string = JSON.parse(argsText).result;
+  // 3. (THE KEY CHANGE) Access properties directly from the `args` object.
+  //    No more JSON.parse!
+  const result: string = args.result;
 
+  // The rest of your component logic remains exactly the same, as it was already well-written.
   const handleFeedbackSubmit = async () => {
     if (submitted) return;
 
     setSubmitted(true);
 
-    const requestData = {
-      input: {},
-      command: {resume: feedbackText}
-    };
-
     if (!onCommand) {
       throw new Error("onCommand is not defined");
     }
 
-    await onCommand(requestData);
+    await onCommand(feedbackText);
   };
 
   return (
@@ -34,8 +35,10 @@ export const TestPromptTool = ({argsText, onCommand}: CustomToolProps) => {
       {!submitted ? (
         <div className="space-y-4">
           <h3 className="text-lg font-medium mb-3">Next Steps</h3>
-          {/* Feedback form always visible */}
-          {result}
+
+          {/* We can now safely render the result variable */}
+          <p className="text-md p-4 bg-gray-100 rounded-md border">{result}</p>
+
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-4 w-4 text-zinc-500" />
@@ -52,7 +55,6 @@ export const TestPromptTool = ({argsText, onCommand}: CustomToolProps) => {
             />
           </div>
 
-          {/* Action buttons */}
           <div className="flex gap-2">
             <Button
               onClick={handleFeedbackSubmit}

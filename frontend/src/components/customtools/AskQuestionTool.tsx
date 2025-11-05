@@ -1,13 +1,13 @@
 "use client";
 
+import type {CustomToolProps} from "bleakai";
 import {useState} from "react";
 import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 import {Card, CardContent} from "../ui/card";
-import type {CustomToolProps} from "./shared";
 
-export const AskQuestionTool = ({argsText, onCommand}: CustomToolProps) => {
-  const questions: QuestionType[] = JSON.parse(argsText).questions;
+export const AskQuestionTool = ({args, onCommand}: CustomToolProps) => {
+  const questions: QuestionType[] = args.questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -25,16 +25,11 @@ export const AskQuestionTool = ({argsText, onCommand}: CustomToolProps) => {
       (_: QuestionType, index) => answers[index] ?? ""
     );
 
-    const requestData = {
-      input: {},
-      command: {resume: JSON.stringify(formattedAnswers)}
-    };
-
     if (!onCommand) {
       throw new Error("onCommand is not defined");
     }
 
-    await onCommand(requestData);
+    await onCommand(JSON.stringify(formattedAnswers));
   };
 
   const handleAnswersChange = (newAnswers: Record<number, string>) => {

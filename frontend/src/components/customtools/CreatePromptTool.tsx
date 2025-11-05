@@ -2,32 +2,27 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import type {CustomToolProps} from "bleakai";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
-import type {CustomToolProps} from "./shared";
 
-export const CreatePromptTool = ({argsText, onCommand}: CustomToolProps) => {
+export const CreatePromptTool = ({args, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   // const {sendCommand, isLoading} = useToolCommand();
 
-  const prompt: string = JSON.parse(argsText).prompt;
+  const prompt: string = args.prompt;
 
   const handleSubmit = async (next_step: "questions" | "test" | "evaluate") => {
     if (submitted) return;
 
     setSubmitted(true);
 
-    const requestData = {
-      input: {},
-      command: {resume: next_step}
-    };
-
     if (!onCommand) {
       throw new Error("onCommand is not defined");
     }
 
-    await onCommand(requestData);
+    await onCommand(next_step);
   };
 
   const handleCopy = () => {

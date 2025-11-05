@@ -2,31 +2,26 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import type {CustomToolProps} from "bleakai";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
-import type {CustomToolProps} from "./shared";
 
-export const EvaluatePromptTool = ({argsText, onCommand}: CustomToolProps) => {
+export const EvaluatePromptTool = ({args, onCommand}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
 
-  const completionLevel = parseInt(JSON.parse(argsText).evaluation);
-  const missingInfo = JSON.parse(argsText).missing_info;
+  const completionLevel = parseInt(args.evaluation);
+  const missingInfo = args.missing_info;
 
   const handleSubmit = async (next_step: "questions" | "test") => {
     if (submitted) return;
 
     setSubmitted(true);
 
-    const requestData = {
-      input: {},
-      command: {resume: next_step}
-    };
-
     if (!onCommand) {
       throw new Error("onCommand is not defined");
     }
 
-    await onCommand(requestData);
+    await onCommand(next_step);
   };
 
   const percentage = (completionLevel / 6) * 100;
