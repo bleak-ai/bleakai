@@ -30,29 +30,29 @@ export default function CustomChat3() {
   const [responses, setResponses] = React.useState<
     ProcessedResponse<ToolComponent>[]
   >([]);
+  const [isLoading, setIsLoading] = React.useState(false);
   const bleakaiInstance = new Bleakai<ToolComponent>({
     url: "http://localhost:8000/stream",
     tools: toolComponentMap // The config now matches BleakaiConfig<ToolComponent>
   });
 
-  // const handleStream = async () => {
-  //   if (!inputText.trim()) return;
-  //   const response = await bleakaiInstance.stream({
-  //     input: inputText
-  //   });
-  //   console.log("Stream response:", response);
-  //   setResponses(response);
-  //   setInputText(""); // Clear input after submission
-  // };
   const handleInitialRequest = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || isLoading) return;
+
+    // Add user message to responses
+    const userMessage: ProcessedResponse<ToolComponent> = {
+      type: "message",
+      data: inputText
+    };
+
+    setResponses((prev) => [...prev, userMessage]);
     await handleStreamingRequest({input: inputText});
     setInputText("");
   };
 
   const handleStreamingRequest = async (request: StreamRequest) => {
     console.log("request", request);
-    // setIsLoading(true);
+    setIsLoading(true);
 
     try {
       // Send the request and get processed responses directly
@@ -60,11 +60,18 @@ export default function CustomChat3() {
 
       console.log("processedResponses", processedResponses);
 
-      setResponses(processedResponses);
+      // Append new responses to existing ones instead of replacing
+      setResponses((prev) => [...prev, ...processedResponses]);
     } catch (error) {
       console.error("Error handling streaming request:", error);
+      // Add error message to responses
+      const errorMessage: ProcessedResponse<ToolComponent> = {
+        type: "error",
+        data: "Error: Failed to process request. Please try again."
+      };
+      setResponses((prev) => [...prev, errorMessage]);
     } finally {
-      // setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -76,40 +83,114 @@ export default function CustomChat3() {
   };
 
   return (
-    <div>
-      <h2>CustomChat3 - Bleakai Instance</h2>
-      <input
-        type="text"
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Enter text..."
-      />
-      <button onClick={handleInitialRequest}>Send</button>
+    <div className="max-w-4xl mx-auto min-h-[50vh] flex flex-col font-sans">
+      <div className="p-5 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <h2 className="m-0 text-slate-700 text-2xl font-semibold">
+          CustomChat3 - Bleakai Instance
+        </h2>
+      </div>
 
-      {responses.map((response, index) => {
-        if (response.type !== "tool_call") {
-          return <pre key={index}>No tool call: {response.type}</pre>;
-        }
+      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white">
+        {responses.map((response, index) => {
+          if (response.type === "message") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-blue-50 self-end rounded-br-sm animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  No tool
+                </div>
+              </div>
+            );
+          }
 
-        // `response.tool` is now correctly typed as `ToolComponent | undefined`
-        const ToolComponent = response.tool;
+          if (response.type === "error") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  {response.data}
+                </div>
+              </div>
+            );
+          }
 
-        if (!ToolComponent) {
+          if (response.type !== "tool_call") {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-yellow-50 self-center border border-yellow-200 animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  <em>No tool call: {response.type}</em>
+                </div>
+              </div>
+            );
+          }
+
+          // `response.tool` is now correctly typed as `ToolComponent | undefined`
+          const ToolComponent = response.tool;
+
+          if (!ToolComponent) {
+            return (
+              <div
+                key={index}
+                className="flex items-start p-3 rounded-xl max-w-full bg-red-50 border border-red-200 self-start animate-slide-in"
+              >
+                <div className="flex-1 text-slate-700 leading-6 break-words">
+                  Tool component not found for: {response.toolName}
+                </div>
+              </div>
+            );
+          }
+
           return (
-            <span key={index}>
-              Tool component not found for: {response.toolName}
-            </span>
+            <div
+              key={index}
+              className="self-start w-full animate-slide-in mb-4"
+            >
+              <ToolComponent
+                args={response.args} // Remember to update your tools to accept `args` object
+                onCommand={handleOnCommand}
+              />
+            </div>
           );
-        }
+        })}
 
-        return (
-          <ToolComponent
-            key={index}
-            args={response.args} // Remember to update your tools to accept `args` object
-            onCommand={handleOnCommand}
-          />
-        );
-      })}
+        {isLoading && (
+          <div className="flex items-start p-3 rounded-xl max-w-full bg-gray-100 self-start rounded-bl-sm animate-slide-in">
+            <div className="flex-1 text-slate-700 leading-6 break-words">
+              <div className="flex gap-1 items-center">
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-1"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-2"></span>
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-typing-3"></span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-3 p-5 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Enter text..."
+          onKeyDown={(e) => e.key === "Enter" && handleInitialRequest()}
+          disabled={isLoading}
+          className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-full text-base outline-none transition-all duration-200 focus:border-blue-500 focus:shadow-blue-100 focus:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        <button
+          onClick={handleInitialRequest}
+          disabled={isLoading || !inputText.trim()}
+          className="px-6 py-3 bg-blue-500 text-white border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-200 hover:bg-blue-600 active:scale-95 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {isLoading ? "Sending..." : "Send"}
+        </button>
+      </div>
     </div>
   );
 }

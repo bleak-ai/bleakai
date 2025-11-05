@@ -10,7 +10,7 @@ function App() {
   return (
     <ThreadProvider>
       <Header />
-      <main className="min-h-screen h-dvh px-2 md:px-4 bg-gray-400">
+      <main className="min-h-screen h-dvh px-2 md:px-4">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat assistantKey="default" />} />
