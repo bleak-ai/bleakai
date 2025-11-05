@@ -155,6 +155,8 @@ async def ask_questions_node(
 
     tools = [ask_questions_tool]
 
+    raise Exception("ask_questions_node error")
+
     llm_with_tools = llm.bind_tools(tools)
 
     response = await llm_with_tools.ainvoke([("human", prompt)])

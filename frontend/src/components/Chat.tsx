@@ -76,7 +76,7 @@ export default function CustomChat() {
       // Add error message to responses
       const errorMessage: ProcessedResponse<ToolComponent> = {
         type: "error",
-        data: "Error: Failed to process request. Please try again."
+        data: { error: "Error: Failed to process request. Please try again." }
       };
       setResponses((prev) => [...prev, errorMessage]);
     } finally {
@@ -145,7 +145,8 @@ export default function CustomChat() {
                 <div className="flex-1 text-slate-700 leading-6 break-words">
                   <div className="font-semibold text-red-700 mb-1">Error:</div>
                   {response.error?.toString() ||
-                    response.data ||
+                    response.data?.error ||
+                    response.data?.toString() ||
                     "Unknown error occurred"}
                 </div>
               </div>

@@ -43,17 +43,22 @@ async def stream_updates(request: Request):
         print("message", message)
         graph_input = {"messages": [message]}
 
-    # Single event generator for both cases
+    # Single event generator with error handling
     async def event_generator():
         updates = []
-        async for update in graph.astream(
-            graph_input,
-            config,
-            stream_mode="updates",
-        ):
-            updates.append(dumpd(update))
+        try:
+            async for update in graph.astream(
+                graph_input,
+                config,
+                stream_mode="updates",
+            ):
+                updates.append(dumpd(update))
 
-        yield json.dumps(updates)
+            yield json.dumps(updates)
+        except Exception as e:
+            # Send error as part of the stream
+            error_response = {"error": str(e)}
+            yield json.dumps(error_response)
 
     return StreamingResponse(
         event_generator(),

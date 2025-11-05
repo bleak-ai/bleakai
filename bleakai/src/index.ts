@@ -83,6 +83,16 @@ export class Bleakai<TTool> {
   }
 
   private parseResponse(response: any): ProcessedResponse<TTool> | null {
+    // Handle direct error format {error: "...", type: "error"}
+    if (response?.error) {
+      return {
+        type: "error",
+        data: response,
+        error: response.error,
+        rawResponse: response
+      };
+    }
+
     // 1️⃣ Extract the top-level key and content safely
     const key = Object.keys(response ?? {})[0];
     const content = response?.[key];
