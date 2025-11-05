@@ -44,39 +44,6 @@ export class Bleakai {
     return this.processChunk(text);
   }
 
-  /**
-   * Streaming version — yields processed responses as they arrive.
-   * Use with: for await (const chunk of bleakai.streamLive(request)) { ... }
-   */
-  async *streamLive(
-    request: StreamRequest
-  ): AsyncGenerator<ProcessedResponse[], void, void> {
-    const res = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {"Content-Type": "application/json", ...this.headers},
-      body: JSON.stringify(request)
-    });
-
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
-
-    if (!reader) return;
-
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, {stream: true});
-      const processed = this.processChunk(chunk);
-
-      if (processed.length > 0) {
-        yield processed;
-      }
-    }
-  }
-
   // -------------------------------
   // Shared internal utilities
   // -------------------------------

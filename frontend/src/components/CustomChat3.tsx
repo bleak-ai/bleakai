@@ -37,19 +37,15 @@ export default function CustomChat3() {
     console.log("request", request);
     // setIsLoading(true);
 
-    const responses: ProcessedResponse[] = [];
-
     try {
-      for await (const processed of bleakaiInstance.streamLive(request)) {
-        console.log("Chunk received:", processed);
-        responses.push(...processed);
-        setResponses([...responses]); // live updates
-      }
+      // Send the request and get processed responses directly
+      const processedResponses = await bleakaiInstance.stream(request);
 
-      console.log("All responses:", responses);
-      setResponses(responses);
-    } catch (err) {
-      console.error("Streaming error:", err);
+      console.log("processedResponses", processedResponses);
+
+      setResponses(processedResponses);
+    } catch (error) {
+      console.error("Error handling streaming request:", error);
     } finally {
       // setIsLoading(false);
     }
