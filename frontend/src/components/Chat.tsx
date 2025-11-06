@@ -1,8 +1,4 @@
-import {
-  Bleakai,
-  type CustomToolProps,
-  type ProcessedResponse
-} from "bleakai/src";
+import {Bleakai, type CustomToolProps, type ProcessedResponse} from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
 
@@ -63,7 +59,7 @@ export default function CustomChat() {
         tools: toolComponentMap,
         requestHandlers: {
           // Sends a message to the thread and streams the response
-          handleMessage: async (input: string, threadId?: string) => {
+          handleMessageStream: async (input: string, threadId?: string) => {
             return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
               method: "POST",
               headers: {"Content-Type": "application/json"},
@@ -91,10 +87,10 @@ export default function CustomChat() {
     [] // Empty dependency array: recreates only on mount
   );
 
-  const thread = React.useMemo(
-    () => bleakai.createThread(`chat-session-${Date.now()}`),
-    [bleakai]
+  const threadRef = React.useRef(
+    bleakai.createThread(`chat-session-${Date.now()}`)
   );
+  const thread = threadRef.current;
 
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;

@@ -1,7 +1,10 @@
 export interface BleakaiConfig<TTool> {
   tools?: Record<string, TTool>;
   requestHandlers: {
-    handleMessage: (input: string, threadId?: string) => Promise<Response>;
+    handleMessageStream: (
+      input: string,
+      threadId?: string
+    ) => Promise<Response>;
     handleResume: (resumeData: string, threadId?: string) => Promise<Response>;
     handleRetry: (threadId?: string) => Promise<Response>;
   };
@@ -73,7 +76,9 @@ export class Thread<TTool> {
   /** Send a message with the given input text */
   async send(input: string): Promise<ProcessedResponse<TTool>[]> {
     return this.bleakai.handleCustomRequest(
-      this.bleakai.getRequestHandlers().handleMessage(input, this.threadId)
+      this.bleakai
+        .getRequestHandlers()
+        .handleMessageStream(input, this.threadId)
     );
   }
 
