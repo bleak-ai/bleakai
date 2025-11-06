@@ -46,26 +46,14 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
     if next_step == "questions":
         return Command(
             goto="ask_questions_node",
-            update={
-                "messages": [AIMessage(content="create_prompt_tool called")],
-                "prompt": prompt,
-            },
         )
     elif next_step == "test":
         return Command(
             goto="test_prompt",
-            update={
-                "messages": [AIMessage(content="create_prompt_tool called")],
-                "prompt": prompt,
-            },
         )
     elif next_step == "evaluate":
         return Command(
             goto="evaluate_prompt_node",
-            update={
-                "messages": [AIMessage(content="create_prompt_tool called")],
-                "prompt": prompt,
-            },
         )
 
 
