@@ -113,13 +113,13 @@ async def tool_supervisor(
             return test_prompt_tool.invoke(
                 input={"result": tool_args["result"], "last_message": last_message}
             )
-        elif tool_name == "suggest_improvements_tool":
-            return suggest_improvements_tool.invoke(
-                input={
-                    "improvements": tool_args["improvements"],
-                    "last_message": last_message,
-                }
-            )
+        # elif tool_name == "suggest_improvements_tool":
+        #     return suggest_improvements_tool.invoke(
+        #         input={
+        #             "improvements": tool_args["improvements"],
+        #             "last_message": last_message,
+        #         }
+        #     )
         elif tool_name == "evaluate_prompt_tool":
             return evaluate_prompt_tool.invoke(
                 input={
@@ -222,6 +222,11 @@ async def autoimprove(
     llm_with_tools = llm.bind_tools(tools)
     res = await llm_with_tools.ainvoke(prompt)
 
+    # improvements = res["args"]["improvements"]
+    print("improvementsres", res)
+
+    # message = "/n".join(improvements)
+    # print("mesagage", message)
     return Command(goto="generate_or_improve_prompt", update={"messages": [res]})
 
 

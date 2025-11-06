@@ -35,12 +35,7 @@ def ask_questions_tool(questions: List[Question], last_message: Any) -> Any:
 
     return Command(
         goto="generate_or_improve_prompt",
-        update={
-            "messages": {
-                "value": [AIMessage(content=questions_with_answers)],
-                "type": "override_last",
-            }
-        },
+        update={"messages": [AIMessage(content=questions_with_answers)]},
     )
 
 
@@ -52,10 +47,7 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
         return Command(
             goto="ask_questions_node",
             update={
-                "messages": {
-                    "value": [AIMessage(content="create_prompt_tool called")],
-                    "type": "override_last",
-                },
+                "messages": [AIMessage(content="create_prompt_tool called")],
                 "prompt": prompt,
             },
         )
@@ -63,10 +55,7 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
         return Command(
             goto="test_prompt",
             update={
-                "messages": {
-                    "value": [AIMessage(content="create_prompt_tool called")],
-                    "type": "override_last",
-                },
+                "messages": [AIMessage(content="create_prompt_tool called")],
                 "prompt": prompt,
             },
         )
@@ -74,10 +63,7 @@ def create_prompt_tool(prompt: str, last_message: Any) -> Any:
         return Command(
             goto="evaluate_prompt_node",
             update={
-                "messages": {
-                    "value": [AIMessage(content="create_prompt_tool called")],
-                    "type": "override_last",
-                },
+                "messages": [AIMessage(content="create_prompt_tool called")],
                 "prompt": prompt,
             },
         )
@@ -92,10 +78,7 @@ def test_prompt_tool(result: str, last_message: Any) -> Any:
     return Command(
         goto="autoimprove",
         update={
-            "messages": {
-                "value": [human_feedback],
-                "type": "override_last",
-            },
+            "messages": [human_feedback],
             "result": result,
         },
     )
@@ -113,10 +96,7 @@ def evaluate_prompt_tool(
         return Command(
             goto="ask_questions_node",
             update={
-                "messages": {
-                    "value": [tool_call_message],
-                    "type": "override_last",
-                }
+                "messages": [tool_call_message],
             },
         )
     elif next_step == "test":
@@ -127,15 +107,19 @@ def evaluate_prompt_tool(
 
 @tool(description="Tool to suggest improvements.")
 def suggest_improvements_tool(improvements: list[str], last_message: Any) -> Any:
-    improvements_result = interrupt({"improvements": improvements})
-    parsed_improvements = json.loads(improvements_result)
+    """Tool to show the improvements in the FE (Never invoked)"""
+    # improvements_result = interrupt({"improvements": improvements})
+    # parsed_improvements = json.loads(improvements_result)
+    # print("parsed_improvements", parsed_improvements)
 
-    if len(parsed_improvements) == 0:
-        return Command(goto="ask_questions_node")
+    # if len(parsed_improvements) == 0:
+    #     return Command(goto="ask_questions_node")
 
-    ai_message = AIMessage(content=parsed_improvements)
+    # ai_message = AIMessage(content=parsed_improvements)
 
-    return Command(goto="generate_or_improve_prompt", update={"messages": [ai_message]})
+    # print("parsed_improvements", parsed_improvements)
+
+    # return Command(goto="generate_or_improve_prompt", update={"messages": [ai_message]})
 
 
 def format_message(message: BaseMessage) -> str:
