@@ -28,6 +28,20 @@ export default function CustomChat() {
     ProcessedResponse<ToolComponent>[]
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const messagesContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    scrollToBottom();
+  }, [responses, isLoading]);
 
   const appendResponse = (
     response:
@@ -121,7 +135,7 @@ export default function CustomChat() {
         </h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white">
         {responses.map((response, index) => {
           if (response.type === "message") {
             const isUserMessage = response.sender === "user";
