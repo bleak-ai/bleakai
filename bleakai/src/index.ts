@@ -97,15 +97,6 @@ export class Thread<TTool> {
   }
 }
 export class Bleakai<TTool> {
-  // Response Type Constants
-  private static readonly RESPONSE_TYPE_ERROR = "error";
-  private static readonly RESPONSE_TYPE_TOOL_CALL = "tool_call";
-  private static readonly RESPONSE_TYPE_MESSAGE = "message";
-  private static readonly RESPONSE_TYPE_OTHER = "other";
-
-  // Sender Constants
-  private static readonly SENDER_AI = "ai";
-
   // Tool Constants
   private static readonly UNKNOWN_TOOL_NAME = "unknown_tool";
 
@@ -148,7 +139,7 @@ export class Bleakai<TTool> {
       // Return error as ProcessedResponse for consistent handling
       return [
         {
-          type: Bleakai.RESPONSE_TYPE_ERROR,
+          type: "error",
           error: error instanceof Error ? error.message : String(error),
           rawResponse: null
         }
@@ -181,10 +172,9 @@ export class Bleakai<TTool> {
     // Handle direct error format {error: "...", type: "error"}
     if (response?.[Bleakai.ERROR_KEY]) {
       return {
-        type: Bleakai.RESPONSE_TYPE_ERROR,
-        data: response,
-        error: response[Bleakai.ERROR_KEY],
-        rawResponse: response
+        type: "error",
+        rawResponse: response,
+        error: response[Bleakai.ERROR_KEY]
       };
     }
 
@@ -208,21 +198,42 @@ export class Bleakai<TTool> {
       if (toolCalls.length > 0) {
         const {name, args} = toolCalls[0];
         const tool = this.tools?.[name];
-        return this.createToolCallResponse(response, content, name, args, tool);
+        return {
+          type: "tool_call",
+          rawResponse: response,
+          data: content,
+          toolName: name,
+          args,
+          tool
+        };
       }
 
       const messageContent = this.extractContent(content);
 
       // 4️⃣ Handle message responses
       if (messageContent) {
-        return this.createMessageResponse(response, content, messageContent);
+        return {
+          type: "message",
+          rawResponse: response,
+          data: content,
+          content: messageContent,
+          sender: "ai"
+        };
       }
 
       // 5️⃣ Handle unrecognized responses
-      return this.createOtherResponse(response, content);
+      return {
+        type: "other",
+        rawResponse: response,
+        data: content
+      };
     } catch (error) {
       console.error("parseResponse: Error while processing response:", error);
-      return this.createErrorResponse(response, error);
+      return {
+        type: "error",
+        rawResponse: response,
+        error
+      };
     }
   }
 
@@ -276,50 +287,5 @@ export class Bleakai<TTool> {
       console.error("Error extracting content:", err);
       return null;
     }
-  }
-
-  private createMessageResponse(
-    raw: ApiResponse,
-    data: ApiContent,
-    content: string
-  ): ProcessedResponse<TTool> {
-    return {
-      type: Bleakai.RESPONSE_TYPE_MESSAGE,
-      data,
-      content,
-      rawResponse: raw,
-      sender: Bleakai.SENDER_AI
-    };
-  }
-
-  private createOtherResponse(
-    raw: ApiResponse,
-    data: ApiContent
-  ): ProcessedResponse<TTool> {
-    return {type: Bleakai.RESPONSE_TYPE_OTHER, data, rawResponse: raw};
-  }
-
-  private createErrorResponse(
-    raw: ApiResponse | null,
-    error: unknown
-  ): ProcessedResponse<TTool> {
-    return {type: Bleakai.RESPONSE_TYPE_ERROR, error, rawResponse: raw};
-  }
-
-  private createToolCallResponse(
-    raw: ApiResponse,
-    data: ApiContent,
-    toolName: string,
-    args: any,
-    tool?: TTool // <-- Accepts the generic tool
-  ): ProcessedResponse<TTool> {
-    return {
-      type: Bleakai.RESPONSE_TYPE_TOOL_CALL,
-      toolName,
-      args,
-      data,
-      rawResponse: raw,
-      tool
-    };
   }
 }
