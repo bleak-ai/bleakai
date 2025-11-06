@@ -15,20 +15,45 @@ export interface StreamRequest {
 }
 
 export interface CustomToolProps {
-  args: any;
+  args: unknown;
   onCommand: (resumeData: string) => Promise<void>;
 }
 
 export type ResponseType = "tool_call" | "message" | "error" | "other";
 export type MessageSender = "user" | "ai" | "system";
 
+// Define the exact shape of API responses
+interface ToolCall {
+  name: string;
+  args: any; // Keep this as 'any' since tool args vary
+}
+
+interface ApiMessage {
+  kwargs?: {
+    content?: string;
+    tool_calls?: ToolCall[];
+  };
+  content?: string;
+  tool_calls?: ToolCall[];
+}
+
+interface ApiContent {
+  messages?: ApiMessage[];
+}
+
+type ApiResponse = {
+  error?: string;
+} & {
+  [key: string]: ApiContent;
+}
+
 export interface ProcessedResponse<TTool> {
   type: ResponseType;
   toolName?: string;
   args?: any;
-  data?: any;
-  error?: any;
-  rawResponse?: any;
+  data?: ApiContent | unknown;
+  error?: unknown;
+  rawResponse?: ApiResponse | null;
   tool?: TTool;
   content?: string;
   sender?: MessageSender;
@@ -107,7 +132,7 @@ export class Bleakai<TTool> {
   // -------------------------------
 
   private processChunk(chunk: string): ProcessedResponse<TTool>[] {
-    let data;
+    let data: ApiResponse | ApiResponse[];
     try {
       data = JSON.parse(chunk);
     } catch {
@@ -121,7 +146,7 @@ export class Bleakai<TTool> {
       .filter(Boolean) as ProcessedResponse<TTool>[];
   }
 
-  private parseResponse(response: any): ProcessedResponse<TTool> | null {
+  private parseResponse(response: ApiResponse): ProcessedResponse<TTool> | null {
     // Handle direct error format {error: "...", type: "error"}
     if (response?.error) {
       return {
@@ -133,8 +158,9 @@ export class Bleakai<TTool> {
     }
 
     // 1️⃣ Extract the top-level key and content safely
-    const key = Object.keys(response ?? {})[0];
-    const content = response?.[key];
+    const keys = Object.keys(response ?? {}).filter(key => key !== 'error');
+    const key = keys[0];
+    const content = key ? response[key] : undefined;
 
     if (!content) {
       console.warn("parseResponse: Missing or invalid content:", response);
@@ -172,7 +198,7 @@ export class Bleakai<TTool> {
    * @param content - The response content containing messages
    * @returns Array of tool calls with name and args
    */
-  private extractToolCalls(content: any): {name: string; args: any}[] {
+  private extractToolCalls(content: ApiContent): ToolCall[] {
     const messages = content?.messages ?? [];
 
     if (!Array.isArray(messages)) {
@@ -180,11 +206,11 @@ export class Bleakai<TTool> {
     }
 
     try {
-      return messages.flatMap((msg: any) => {
+      return messages.flatMap((msg: ApiMessage) => {
         const calls = msg?.kwargs?.tool_calls ?? msg?.tool_calls ?? [];
         return calls
-          .filter((c: any) => c?.args)
-          .map((c: any) => ({
+          .filter((c): c is ToolCall => !!c?.args) // Type guard
+          .map((c) => ({
             name: c.name ?? "unknown_tool",
             args: c.args
           }));
@@ -200,13 +226,8 @@ export class Bleakai<TTool> {
    * @param content - The response content containing messages
    * @returns Extracted content string or null if not found
    */
-  private extractContent(content: any): string | null {
-    const rawMessages = content?.messages;
-    const messages = Array.isArray(rawMessages)
-      ? rawMessages
-      : Array.isArray(rawMessages?.value)
-      ? rawMessages.value
-      : [];
+  private extractContent(content: ApiContent): string | null {
+    const messages = content?.messages;
 
     if (!Array.isArray(messages)) return null;
 
@@ -225,24 +246,24 @@ export class Bleakai<TTool> {
   }
 
   private createMessageResponse(
-    raw: any,
-    data: any,
+    raw: ApiResponse,
+    data: ApiContent,
     content: string
   ): ProcessedResponse<TTool> {
     return {type: "message", data, content, rawResponse: raw, sender: "ai"};
   }
 
-  private createOtherResponse(raw: any, data: any): ProcessedResponse<TTool> {
+  private createOtherResponse(raw: ApiResponse, data: ApiContent): ProcessedResponse<TTool> {
     return {type: "other", data, rawResponse: raw};
   }
 
-  private createErrorResponse(raw: any, error: any): ProcessedResponse<TTool> {
+  private createErrorResponse(raw: ApiResponse | null, error: unknown): ProcessedResponse<TTool> {
     return {type: "error", error, rawResponse: raw};
   }
 
   private createToolCallResponse(
-    raw: any,
-    data: any,
+    raw: ApiResponse,
+    data: ApiContent,
     toolName: string,
     args: any,
     tool?: TTool // <-- Accepts the generic tool

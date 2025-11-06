@@ -139,7 +139,6 @@ export default function CustomChat() {
                       </div>
                       <div className="text-gray-600 text-sm">
                         {response.error?.toString() ||
-                          response.data?.error ||
                           response.data?.toString() ||
                           "Unknown error occurred"}
                       </div>
