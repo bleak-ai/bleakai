@@ -6,6 +6,13 @@ import {
 } from "bleakai/src";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
+
+const jsonPost = (url: string, data: object) =>
+  fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
 import {AskQuestionTool} from "./tools/AskQuestionTool";
 import {CreatePromptTool} from "./tools/CreatePromptTool";
 import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
@@ -64,29 +71,13 @@ export default function CustomChat() {
         tools: toolComponentMap,
         requestHandlers: {
           handleMessage: async (input: string, threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({
-                input
-              })
-            });
+            return jsonPost(`http://localhost:8000/threads/${threadId}/stream`, {input});
           },
           handleResume: async (resumeData: string, threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({
-                resume: resumeData
-              })
-            });
+            return jsonPost(`http://localhost:8000/threads/${threadId}/resume`, {resume: resumeData});
           },
           handleRetry: async (threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({})
-            });
+            return jsonPost(`http://localhost:8000/threads/${threadId}/retry`, {});
           }
         }
       }),
