@@ -32,16 +32,6 @@ export default function CustomChat() {
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const bleakai = React.useMemo(
-    () =>
-      new Bleakai<ToolComponent>({
-        url: "http://localhost:8000/stream",
-        tools: toolComponentMap,
-        thread_id: `chat-session-${Date.now()}`
-      }),
-    []
-  );
-
   const appendResponse = (
     response:
       | ProcessedResponse<ToolComponent>
@@ -64,6 +54,16 @@ export default function CustomChat() {
       setIsLoading(false);
     }
   };
+
+  const bleakai = React.useMemo(
+    () =>
+      new Bleakai<ToolComponent>({
+        url: "http://localhost:8000/stream",
+        tools: toolComponentMap,
+        thread_id: `chat-session-${Date.now()}`
+      }),
+    []
+  );
 
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
