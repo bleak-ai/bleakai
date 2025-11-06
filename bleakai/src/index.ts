@@ -1,6 +1,5 @@
 export interface BleakaiConfig<TTool> {
   tools?: Record<string, TTool>;
-  thread_id?: string;
   requestHandlers: {
     handleMessage: (input: string, threadId?: string) => Promise<Response>;
     handleResume: (resumeData: string, threadId?: string) => Promise<Response>;
@@ -61,6 +60,42 @@ export interface ProcessedResponse<TTool> {
   content?: string;
   sender?: MessageSender;
 }
+
+export class Thread<TTool> {
+  private bleakai: Bleakai<TTool>;
+  private threadId: string;
+
+  constructor(bleakai: Bleakai<TTool>, threadId: string) {
+    this.bleakai = bleakai;
+    this.threadId = threadId;
+  }
+
+  /** Send a message with the given input text */
+  async send(input: string): Promise<ProcessedResponse<TTool>[]> {
+    return this.bleakai.handleCustomRequest(
+      this.bleakai.getRequestHandlers().handleMessage(input, this.threadId)
+    );
+  }
+
+  /** Resume a previous session with the given resume data */
+  async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
+    return this.bleakai.handleCustomRequest(
+      this.bleakai.getRequestHandlers().handleResume(resumeData, this.threadId)
+    );
+  }
+
+  /** Retry the last request */
+  async retry(): Promise<ProcessedResponse<TTool>[]> {
+    return this.bleakai.handleCustomRequest(
+      this.bleakai.getRequestHandlers().handleRetry(this.threadId)
+    );
+  }
+
+  /** Get the thread ID */
+  getId(): string {
+    return this.threadId;
+  }
+}
 export class Bleakai<TTool> {
   // Response Type Constants
   private static readonly RESPONSE_TYPE_ERROR = "error";
@@ -78,38 +113,25 @@ export class Bleakai<TTool> {
   private static readonly ERROR_KEY = "error";
 
   private tools: Record<string, TTool>;
-  private thread_id?: string;
   private requestHandlers: BleakaiConfig<TTool>["requestHandlers"];
 
   constructor(config: BleakaiConfig<TTool>) {
     this.tools = config.tools || {};
-    this.thread_id = config.thread_id;
     this.requestHandlers = config.requestHandlers;
   }
 
-  /** Send a message with the given input text */
-  async sendMessage(input: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._handleCustomRequest(
-      this.requestHandlers.handleMessage(input, this.thread_id)
-    );
+  /** Create a new thread with the given thread ID */
+  createThread(threadId: string): Thread<TTool> {
+    return new Thread(this, threadId);
   }
 
-  /** Resume a previous session with the given resume data */
-  async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._handleCustomRequest(
-      this.requestHandlers.handleResume(resumeData, this.thread_id)
-    );
+  /** Get request handlers (accessible to Thread class) */
+  getRequestHandlers() {
+    return this.requestHandlers;
   }
 
-  /** Retry the last request */
-  async retry(): Promise<ProcessedResponse<TTool>[]> {
-    return this._handleCustomRequest(
-      this.requestHandlers.handleRetry(this.thread_id)
-    );
-  }
-
-  /** Private method to handle custom request handlers */
-  private async _handleCustomRequest(
+  /** Handle custom request (accessible to Thread class) */
+  async handleCustomRequest(
     responsePromise: Promise<Response>
   ): Promise<ProcessedResponse<TTool>[]> {
     try {

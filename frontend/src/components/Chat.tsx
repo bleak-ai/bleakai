@@ -1,5 +1,6 @@
 import {
   Bleakai,
+  Thread,
   type CustomToolProps,
   type ProcessedResponse
 } from "bleakai/src";
@@ -61,7 +62,6 @@ export default function CustomChat() {
     () =>
       new Bleakai<ToolComponent>({
         tools: toolComponentMap,
-        thread_id: `chat-session-${Date.now()}`,
         requestHandlers: {
           handleMessage: async (input: string, threadId?: string) => {
             return fetch("http://localhost:8000/stream", {
@@ -103,6 +103,11 @@ export default function CustomChat() {
     []
   );
 
+  const thread = React.useMemo(
+    () => bleakai.createThread(`chat-session-${Date.now()}`),
+    [bleakai]
+  );
+
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
@@ -113,15 +118,15 @@ export default function CustomChat() {
       sender: "user"
     });
     setInputText("");
-    await handleRequest(() => bleakai.sendMessage(inputText));
+    await handleRequest(() => thread.send(inputText));
   };
 
   const handleOnCommand = async (resumeData: string) => {
-    handleRequest(() => bleakai.resume(resumeData));
+    handleRequest(() => thread.resume(resumeData));
   };
 
   const handleRetry = async () => {
-    handleRequest(() => bleakai.retry());
+    handleRequest(() => thread.retry());
   };
 
   return (
