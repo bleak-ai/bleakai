@@ -1,11 +1,11 @@
 import json
-from http.client import HTTPException
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.load import dumpd
 from langgraph.types import Command
+from pydantic import BaseModel
 from src.graph import graph
 
 app = FastAPI()
@@ -18,39 +18,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Pydantic models for request body validation
+class StreamInput(BaseModel):
+    """Request model for streaming conversations."""
+    input: str
 
-@app.post("/stream")
-async def stream_updates(request: Request):
-    """Stream LangGraph updates as NDJSON."""
-    body = await request.json()
+class ResumeInput(BaseModel):
+    """Request model for resuming conversations."""
+    resume: str
 
-    # Get thread_id from request or use default
-    thread_id = body.get("thread_id", None)
-    if thread_id is None:
-        raise HTTPException(status_code=400, detail="Missing thread_id")
 
-    print("thread_id", thread_id)
-    config = {"configurable": {"thread_id": thread_id}}
-    print("body", body)
-
-    # Determine input based on request type
-    command_data = body.get("command")
-    retry_flag = body.get("retry", False)
-
-    if retry_flag:
-        # Restart: resume from checkpoint without new input
-        graph_input = None
-    elif command_data and "resume" in command_data:
-        # Resume with updated value from interrupt
-        graph_input = Command(resume=command_data["resume"])
-    else:
-        # Start fresh
-        input_data = body.get("input", "")
-        message = {"content": input_data, "type": "human"}
-        print("message", message)
-        graph_input = {"messages": [message]}
-
-    # Single event generator with error handling
+def create_streaming_response(graph_input, config):
+    """Create a streaming response with proper error handling."""
     async def event_generator():
         updates = []
         try:
@@ -72,3 +51,41 @@ async def stream_updates(request: Request):
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+# Endpoint for starting/continuing a conversation
+@app.post("/threads/{thread_id}/stream")
+async def stream_thread(thread_id: str, body: StreamInput):
+    """Stream conversation updates for a specific thread."""
+    config = {"configurable": {"thread_id": thread_id}}
+    message = {"content": body.input, "type": "human"}
+    graph_input = {"messages": [message]}
+
+    print(f"Streaming for thread_id: {thread_id}")
+    print(f"Message: {message}")
+
+    return create_streaming_response(graph_input, config)
+
+
+# New, specific endpoint for resuming
+@app.post("/threads/{thread_id}/resume")
+async def resume_thread(thread_id: str, body: ResumeInput):
+    """Resume a conversation from an interrupt point."""
+    config = {"configurable": {"thread_id": thread_id}}
+    graph_input = Command(resume=body.resume)
+
+    print(f"Resuming thread_id: {thread_id} with resume data")
+
+    return create_streaming_response(graph_input, config)
+
+
+# New, specific endpoint for retrying
+@app.post("/threads/{thread_id}/retry")
+async def retry_thread(thread_id: str):
+    """Retry the last action in a thread."""
+    config = {"configurable": {"thread_id": thread_id}}
+    graph_input = None  # Input is None for a retry
+
+    print(f"Retrying thread_id: {thread_id}")
+
+    return create_streaming_response(graph_input, config)

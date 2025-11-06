@@ -64,38 +64,28 @@ export default function CustomChat() {
         tools: toolComponentMap,
         requestHandlers: {
           handleMessage: async (input: string, threadId?: string) => {
-            return fetch("http://localhost:8000/stream", {
+            return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
               method: "POST",
               headers: {"Content-Type": "application/json"},
               body: JSON.stringify({
-                input,
-                thread_id: threadId,
-                custom_param: "init_request"
+                input
               })
             });
           },
           handleResume: async (resumeData: string, threadId?: string) => {
-            return fetch("http://localhost:8000/stream", {
+            return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
               method: "POST",
               headers: {"Content-Type": "application/json"},
               body: JSON.stringify({
-                input: "",
-                command: {resume: resumeData},
-                thread_id: threadId,
-                custom_param: "resume_request"
+                resume: resumeData
               })
             });
           },
           handleRetry: async (threadId?: string) => {
-            return fetch("http://localhost:8000/stream", {
+            return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
               method: "POST",
               headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({
-                input: "",
-                retry: true,
-                thread_id: threadId,
-                custom_param: "retry_request"
-              })
+              body: JSON.stringify({})
             });
           }
         }
