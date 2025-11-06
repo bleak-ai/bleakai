@@ -45,15 +45,16 @@ async def generate_or_improve_prompt(
         formatted_messages = get_formatted_messages([last_message])
     else:
         # HANDLE THE FIRST MESSAGE FROM THE CHAT BY INITIALISING THE PROMPT VARIABLE IN THE STATE
+        user_message_content = messages[0]["content"]
         tool_call = ToolCall(
             name="create_prompt_tool",
-            args={"prompt": messages[0]["content"]},
+            args={"prompt": user_message_content},
             id="manual_test_call_1",
         )
         ai_message = AIMessage(content="", tool_calls=[tool_call])
         return Command(
             goto="tool_supervisor",
-            update={"messages": [ai_message], "prompt": messages[0]["content"]},
+            update={"messages": [ai_message], "prompt": user_message_content},
         )
 
     prompt = PROMPT_TEMPLATE.format(
