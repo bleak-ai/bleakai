@@ -48,21 +48,23 @@ export class Bleakai<TTool> {
 
   /** Send a message with the given input text */
   async sendMessage(input: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({ input });
+    return this._request({input});
   }
 
   /** Resume a previous session with the given resume data */
   async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({ input: "", command: { resume: resumeData } });
+    return this._request({input: "", command: {resume: resumeData}});
   }
 
   /** Retry the last request */
   async retry(): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({ input: "", retry: true });
+    return this._request({input: "", retry: true});
   }
 
   /** Private method to handle all request types */
-  private async _request(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
+  private async _request(
+    request: StreamRequest
+  ): Promise<ProcessedResponse<TTool>[]> {
     return this.stream(request);
   }
 
@@ -74,14 +76,30 @@ export class Bleakai<TTool> {
       thread_id: request.thread_id || this.thread_id
     };
 
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {"Content-Type": "application/json", ...this.headers},
-      body: JSON.stringify(requestWithThreadId)
-    });
+    try {
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...this.headers},
+        body: JSON.stringify(requestWithThreadId)
+      });
 
-    const text = await response.text();
-    return this.processChunk(text);
+      // Check HTTP status
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const text = await response.text();
+      return this.processChunk(text);
+    } catch (error) {
+      // Return error as ProcessedResponse for consistent handling
+      return [
+        {
+          type: "error",
+          error: error instanceof Error ? error.message : String(error),
+          rawResponse: null
+        }
+      ];
+    }
   }
 
   // -------------------------------
