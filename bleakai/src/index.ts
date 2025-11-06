@@ -1,8 +1,11 @@
 export interface BleakaiConfig<TTool> {
-  url: string;
-  headers?: Record<string, string>;
   tools?: Record<string, TTool>;
   thread_id?: string;
+  requestHandlers: {
+    handleMessage: (input: string, threadId?: string) => Promise<Response>;
+    handleResume: (resumeData: string, threadId?: string) => Promise<Response>;
+    handleRetry: (threadId?: string) => Promise<Response>;
+  };
 }
 
 export interface StreamRequest {
@@ -45,7 +48,7 @@ type ApiResponse = {
   error?: string;
 } & {
   [key: string]: ApiContent;
-}
+};
 
 export interface ProcessedResponse<TTool> {
   type: ResponseType;
@@ -59,11 +62,6 @@ export interface ProcessedResponse<TTool> {
   sender?: MessageSender;
 }
 export class Bleakai<TTool> {
-  // HTTP Constants
-  private static readonly HTTP_METHOD_POST = "POST";
-  private static readonly CONTENT_TYPE_HEADER = "Content-Type";
-  private static readonly CONTENT_TYPE_JSON = "application/json";
-
   // Response Type Constants
   private static readonly RESPONSE_TYPE_ERROR = "error";
   private static readonly RESPONSE_TYPE_TOOL_CALL = "tool_call";
@@ -79,54 +77,43 @@ export class Bleakai<TTool> {
   // API Constants
   private static readonly ERROR_KEY = "error";
 
-  private endpoint: string;
-  private headers: Record<string, string>;
   private tools: Record<string, TTool>;
   private thread_id?: string;
+  private requestHandlers: BleakaiConfig<TTool>["requestHandlers"];
 
   constructor(config: BleakaiConfig<TTool>) {
-    this.endpoint = config.url;
-    this.headers = config.headers || {};
     this.tools = config.tools || {};
     this.thread_id = config.thread_id;
+    this.requestHandlers = config.requestHandlers;
   }
 
   /** Send a message with the given input text */
   async sendMessage(input: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({input});
+    return this._handleCustomRequest(
+      this.requestHandlers.handleMessage(input, this.thread_id)
+    );
   }
 
   /** Resume a previous session with the given resume data */
   async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({input: "", command: {resume: resumeData}});
+    return this._handleCustomRequest(
+      this.requestHandlers.handleResume(resumeData, this.thread_id)
+    );
   }
 
   /** Retry the last request */
   async retry(): Promise<ProcessedResponse<TTool>[]> {
-    return this._request({input: "", retry: true});
+    return this._handleCustomRequest(
+      this.requestHandlers.handleRetry(this.thread_id)
+    );
   }
 
-  /** Private method to handle all request types */
-  private async _request(
-    request: StreamRequest
+  /** Private method to handle custom request handlers */
+  private async _handleCustomRequest(
+    responsePromise: Promise<Response>
   ): Promise<ProcessedResponse<TTool>[]> {
-    return this.send(request);
-  }
-
-  /** Non-streaming: waits for full response */
-  async send(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
-    // Include thread_id in the request if it exists
-    const requestWithThreadId = {
-      ...request,
-      thread_id: request.thread_id || this.thread_id
-    };
-
     try {
-      const response = await fetch(this.endpoint, {
-        method: Bleakai.HTTP_METHOD_POST,
-        headers: {[Bleakai.CONTENT_TYPE_HEADER]: Bleakai.CONTENT_TYPE_JSON, ...this.headers},
-        body: JSON.stringify(requestWithThreadId)
-      });
+      const response = await responsePromise;
 
       // Check HTTP status
       if (!response.ok) {
@@ -166,7 +153,9 @@ export class Bleakai<TTool> {
       .filter(Boolean) as ProcessedResponse<TTool>[];
   }
 
-  private parseResponse(response: ApiResponse): ProcessedResponse<TTool> | null {
+  private parseResponse(
+    response: ApiResponse
+  ): ProcessedResponse<TTool> | null {
     // Handle direct error format {error: "...", type: "error"}
     if (response?.[Bleakai.ERROR_KEY]) {
       return {
@@ -178,7 +167,9 @@ export class Bleakai<TTool> {
     }
 
     // 1️⃣ Extract the top-level key and content safely
-    const keys = Object.keys(response ?? {}).filter(key => key !== Bleakai.ERROR_KEY);
+    const keys = Object.keys(response ?? {}).filter(
+      (key) => key !== Bleakai.ERROR_KEY
+    );
     const key = keys[0];
     const content = key ? response[key] : undefined;
 
@@ -270,14 +261,26 @@ export class Bleakai<TTool> {
     data: ApiContent,
     content: string
   ): ProcessedResponse<TTool> {
-    return {type: Bleakai.RESPONSE_TYPE_MESSAGE, data, content, rawResponse: raw, sender: Bleakai.SENDER_AI};
+    return {
+      type: Bleakai.RESPONSE_TYPE_MESSAGE,
+      data,
+      content,
+      rawResponse: raw,
+      sender: Bleakai.SENDER_AI
+    };
   }
 
-  private createOtherResponse(raw: ApiResponse, data: ApiContent): ProcessedResponse<TTool> {
+  private createOtherResponse(
+    raw: ApiResponse,
+    data: ApiContent
+  ): ProcessedResponse<TTool> {
     return {type: Bleakai.RESPONSE_TYPE_OTHER, data, rawResponse: raw};
   }
 
-  private createErrorResponse(raw: ApiResponse | null, error: unknown): ProcessedResponse<TTool> {
+  private createErrorResponse(
+    raw: ApiResponse | null,
+    error: unknown
+  ): ProcessedResponse<TTool> {
     return {type: Bleakai.RESPONSE_TYPE_ERROR, error, rawResponse: raw};
   }
 
@@ -288,6 +291,13 @@ export class Bleakai<TTool> {
     args: any,
     tool?: TTool // <-- Accepts the generic tool
   ): ProcessedResponse<TTool> {
-    return {type: Bleakai.RESPONSE_TYPE_TOOL_CALL, toolName, args, data, rawResponse: raw, tool};
+    return {
+      type: Bleakai.RESPONSE_TYPE_TOOL_CALL,
+      toolName,
+      args,
+      data,
+      rawResponse: raw,
+      tool
+    };
   }
 }

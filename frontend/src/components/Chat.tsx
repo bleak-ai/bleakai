@@ -55,12 +55,50 @@ export default function CustomChat() {
     }
   };
 
+  // Custom request handlers
+
   const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
-        url: "http://localhost:8000/stream",
         tools: toolComponentMap,
-        thread_id: `chat-session-${Date.now()}`
+        thread_id: `chat-session-${Date.now()}`,
+        requestHandlers: {
+          handleMessage: async (input: string, threadId?: string) => {
+            return fetch("http://localhost:8000/stream", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({
+                input,
+                thread_id: threadId,
+                custom_param: "init_request"
+              })
+            });
+          },
+          handleResume: async (resumeData: string, threadId?: string) => {
+            return fetch("http://localhost:8000/stream", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({
+                input: "",
+                command: {resume: resumeData},
+                thread_id: threadId,
+                custom_param: "resume_request"
+              })
+            });
+          },
+          handleRetry: async (threadId?: string) => {
+            return fetch("http://localhost:8000/stream", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({
+                input: "",
+                retry: true,
+                thread_id: threadId,
+                custom_param: "retry_request"
+              })
+            });
+          }
+        }
       }),
     []
   );
