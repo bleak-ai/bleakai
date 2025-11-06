@@ -6,7 +6,7 @@ import type {CustomToolProps} from "bleakai";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
 
-export const CreatePromptTool = ({args, onCommand}: CustomToolProps) => {
+export const CreatePromptTool = ({args, onResume}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   // const {sendCommand, isLoading} = useToolCommand();
@@ -18,11 +18,11 @@ export const CreatePromptTool = ({args, onCommand}: CustomToolProps) => {
 
     setSubmitted(true);
 
-    if (!onCommand) {
-      throw new Error("onCommand is not defined");
+    if (!onResume) {
+      throw new Error("onResume is not defined");
     }
 
-    await onCommand(next_step);
+    await onResume(next_step);
   };
 
   const handleCopy = () => {

@@ -6,7 +6,7 @@ import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 import {Card, CardContent} from "../ui/card";
 
-export const AskQuestionTool = ({args, onCommand}: CustomToolProps) => {
+export const AskQuestionTool = ({args, onResume}: CustomToolProps) => {
   const questions: QuestionType[] = args.questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -25,11 +25,11 @@ export const AskQuestionTool = ({args, onCommand}: CustomToolProps) => {
       (_: QuestionType, index) => answers[index] ?? ""
     );
 
-    if (!onCommand) {
-      throw new Error("onCommand is not defined");
+    if (!onResume) {
+      throw new Error("onResume is not defined");
     }
 
-    await onCommand(JSON.stringify(formattedAnswers));
+    await onResume(JSON.stringify(formattedAnswers));
   };
 
   const handleAnswersChange = (newAnswers: Record<number, string>) => {

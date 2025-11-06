@@ -18,7 +18,7 @@ export interface StreamRequest {
 
 export interface CustomToolProps {
   args: unknown;
-  onCommand: (resumeData: string) => Promise<void>;
+  onResume: (resumeData: string) => Promise<void>;
 }
 
 export type ResponseType = "tool_call" | "message" | "error" | "other";

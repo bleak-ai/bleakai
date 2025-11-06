@@ -6,7 +6,7 @@ import type {CustomToolProps} from "bleakai";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
 
-export const EvaluatePromptTool = ({args, onCommand}: CustomToolProps) => {
+export const EvaluatePromptTool = ({args, onResume}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
 
   const completionLevel = parseInt(args.evaluation);
@@ -17,11 +17,11 @@ export const EvaluatePromptTool = ({args, onCommand}: CustomToolProps) => {
 
     setSubmitted(true);
 
-    if (!onCommand) {
-      throw new Error("onCommand is not defined");
+    if (!onResume) {
+      throw new Error("onResume is not defined");
     }
 
-    await onCommand(next_step);
+    await onResume(next_step);
   };
 
   const percentage = (completionLevel / 6) * 100;

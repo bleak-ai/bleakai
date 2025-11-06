@@ -9,7 +9,7 @@ import {useState} from "react";
 import type {CustomToolProps} from "bleakai"; // Assuming bleakai is aliased or path is correct
 
 // 2. Change the function signature to destructure `args` instead of `argsText`
-export const TestPromptTool = ({args, onCommand}: CustomToolProps) => {
+export const TestPromptTool = ({args, onResume}: CustomToolProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
 
@@ -23,11 +23,11 @@ export const TestPromptTool = ({args, onCommand}: CustomToolProps) => {
 
     setSubmitted(true);
 
-    if (!onCommand) {
-      throw new Error("onCommand is not defined");
+    if (!onResume) {
+      throw new Error("onResume is not defined");
     }
 
-    await onCommand(feedbackText);
+    await onResume(feedbackText);
   };
 
   return (

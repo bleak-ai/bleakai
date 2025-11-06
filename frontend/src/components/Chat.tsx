@@ -1,18 +1,11 @@
 import {
   Bleakai,
-  Thread,
   type CustomToolProps,
   type ProcessedResponse
 } from "bleakai/src";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
 
-const jsonPost = (url: string, data: object) =>
-  fetch(url, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(data)
-  });
 import {AskQuestionTool} from "./tools/AskQuestionTool";
 import {CreatePromptTool} from "./tools/CreatePromptTool";
 import {EvaluatePromptTool} from "./tools/EvaluatePromptTool";
@@ -64,24 +57,38 @@ export default function CustomChat() {
   };
 
   // Custom request handlers
-
   const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
         tools: toolComponentMap,
         requestHandlers: {
+          // Sends a message to the thread and streams the response
           handleMessage: async (input: string, threadId?: string) => {
-            return jsonPost(`http://localhost:8000/threads/${threadId}/stream`, {input});
+            return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({input})
+            });
           },
+          // Resumes the conversation with provided data
           handleResume: async (resumeData: string, threadId?: string) => {
-            return jsonPost(`http://localhost:8000/threads/${threadId}/resume`, {resume: resumeData});
+            return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({resume: resumeData})
+            });
           },
+          // Retries the last action in the thread
           handleRetry: async (threadId?: string) => {
-            return jsonPost(`http://localhost:8000/threads/${threadId}/retry`, {});
+            return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({})
+            });
           }
         }
       }),
-    []
+    [] // Empty dependency array: recreates only on mount
   );
 
   const thread = React.useMemo(
@@ -102,7 +109,7 @@ export default function CustomChat() {
     await handleRequest(() => thread.send(inputText));
   };
 
-  const handleOnCommand = async (resumeData: string) => {
+  const handleResume = async (resumeData: string) => {
     handleRequest(() => thread.resume(resumeData));
   };
 
@@ -216,7 +223,7 @@ export default function CustomChat() {
               key={index}
               className="self-start w-full animate-slide-in mb-4"
             >
-              <ToolComponent args={response.args} onCommand={handleOnCommand} />
+              <ToolComponent args={response.args} onResume={handleResume} />
             </div>
           );
         })}
