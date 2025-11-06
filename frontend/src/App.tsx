@@ -6,9 +6,9 @@ import Home from "./components/home/Home";
 
 function App() {
   return (
-    <>
+    <div className="min-h-screen h-dvh px-2 md:px-4">
       <Header />
-      <main className="min-h-screen h-dvh px-2 md:px-4">
+      <main className="h-[calc(100dvh-4rem)] md:h-[calc(100dvh-8rem)]">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat />} />
@@ -21,7 +21,7 @@ function App() {
       </main>
 
       {/* <Footer /> */}
-    </>
+    </div>
   );
 }
 
