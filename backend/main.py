@@ -1,8 +1,8 @@
-import json
+from os import error
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from langchain_core.load import dumpd
 from langgraph.types import Command
 from pydantic import BaseModel
@@ -18,39 +18,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Pydantic models for request body validation
 class StreamInput(BaseModel):
     """Request model for streaming conversations."""
+
     input: str
+
 
 class ResumeInput(BaseModel):
     """Request model for resuming conversations."""
+
     resume: str
 
 
-def create_streaming_response(graph_input, config):
-    """Create a streaming response with proper error handling."""
-    async def event_generator():
-        updates = []
-        try:
-            async for update in graph.astream(
-                graph_input,
-                config,
-                stream_mode="updates",
-            ):
-                updates.append(dumpd(update))
-
-            yield json.dumps(updates)
-        except Exception as e:
-            # Send error as part of the stream
-            error_response = {"error": str(e)}
-            yield json.dumps(error_response)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="application/x-ndjson",
-        headers={"Cache-Control": "no-cache"},
-    )
+async def run_graph(graph_input, config, thread_id):
+    """Run the graph and return JSON response with consistent envelope."""
+    try:
+        updates = [
+            dumpd(u)
+            async for u in graph.astream(graph_input, config, stream_mode="updates")
+        ]
+        return JSONResponse(content=updates)
+    except Exception:
+        return JSONResponse(content=error, status_code=500)
 
 
 # Endpoint for starting/continuing a conversation
@@ -64,7 +55,7 @@ async def stream_thread(thread_id: str, body: StreamInput):
     print(f"Streaming for thread_id: {thread_id}")
     print(f"Message: {message}")
 
-    return create_streaming_response(graph_input, config)
+    return await run_graph(graph_input, config, thread_id)
 
 
 # New, specific endpoint for resuming
@@ -76,7 +67,7 @@ async def resume_thread(thread_id: str, body: ResumeInput):
 
     print(f"Resuming thread_id: {thread_id} with resume data")
 
-    return create_streaming_response(graph_input, config)
+    return await run_graph(graph_input, config, thread_id)
 
 
 # New, specific endpoint for retrying
@@ -88,4 +79,4 @@ async def retry_thread(thread_id: str):
 
     print(f"Retrying thread_id: {thread_id}")
 
-    return create_streaming_response(graph_input, config)
+    return await run_graph(graph_input, config, thread_id)
