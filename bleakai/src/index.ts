@@ -59,6 +59,26 @@ export interface ProcessedResponse<TTool> {
   sender?: MessageSender;
 }
 export class Bleakai<TTool> {
+  // HTTP Constants
+  private static readonly HTTP_METHOD_POST = "POST";
+  private static readonly CONTENT_TYPE_HEADER = "Content-Type";
+  private static readonly CONTENT_TYPE_JSON = "application/json";
+
+  // Response Type Constants
+  private static readonly RESPONSE_TYPE_ERROR = "error";
+  private static readonly RESPONSE_TYPE_TOOL_CALL = "tool_call";
+  private static readonly RESPONSE_TYPE_MESSAGE = "message";
+  private static readonly RESPONSE_TYPE_OTHER = "other";
+
+  // Sender Constants
+  private static readonly SENDER_AI = "ai";
+
+  // Tool Constants
+  private static readonly UNKNOWN_TOOL_NAME = "unknown_tool";
+
+  // API Constants
+  private static readonly ERROR_KEY = "error";
+
   private endpoint: string;
   private headers: Record<string, string>;
   private tools: Record<string, TTool>;
@@ -103,8 +123,8 @@ export class Bleakai<TTool> {
 
     try {
       const response = await fetch(this.endpoint, {
-        method: "POST",
-        headers: {"Content-Type": "application/json", ...this.headers},
+        method: Bleakai.HTTP_METHOD_POST,
+        headers: {[Bleakai.CONTENT_TYPE_HEADER]: Bleakai.CONTENT_TYPE_JSON, ...this.headers},
         body: JSON.stringify(requestWithThreadId)
       });
 
@@ -119,7 +139,7 @@ export class Bleakai<TTool> {
       // Return error as ProcessedResponse for consistent handling
       return [
         {
-          type: "error",
+          type: Bleakai.RESPONSE_TYPE_ERROR,
           error: error instanceof Error ? error.message : String(error),
           rawResponse: null
         }
@@ -148,17 +168,17 @@ export class Bleakai<TTool> {
 
   private parseResponse(response: ApiResponse): ProcessedResponse<TTool> | null {
     // Handle direct error format {error: "...", type: "error"}
-    if (response?.error) {
+    if (response?.[Bleakai.ERROR_KEY]) {
       return {
-        type: "error",
+        type: Bleakai.RESPONSE_TYPE_ERROR,
         data: response,
-        error: response.error,
+        error: response[Bleakai.ERROR_KEY],
         rawResponse: response
       };
     }
 
     // 1️⃣ Extract the top-level key and content safely
-    const keys = Object.keys(response ?? {}).filter(key => key !== 'error');
+    const keys = Object.keys(response ?? {}).filter(key => key !== Bleakai.ERROR_KEY);
     const key = keys[0];
     const content = key ? response[key] : undefined;
 
@@ -211,7 +231,7 @@ export class Bleakai<TTool> {
         return calls
           .filter((c): c is ToolCall => !!c?.args) // Type guard
           .map((c) => ({
-            name: c.name ?? "unknown_tool",
+            name: c.name ?? Bleakai.UNKNOWN_TOOL_NAME,
             args: c.args
           }));
       });
@@ -250,15 +270,15 @@ export class Bleakai<TTool> {
     data: ApiContent,
     content: string
   ): ProcessedResponse<TTool> {
-    return {type: "message", data, content, rawResponse: raw, sender: "ai"};
+    return {type: Bleakai.RESPONSE_TYPE_MESSAGE, data, content, rawResponse: raw, sender: Bleakai.SENDER_AI};
   }
 
   private createOtherResponse(raw: ApiResponse, data: ApiContent): ProcessedResponse<TTool> {
-    return {type: "other", data, rawResponse: raw};
+    return {type: Bleakai.RESPONSE_TYPE_OTHER, data, rawResponse: raw};
   }
 
   private createErrorResponse(raw: ApiResponse | null, error: unknown): ProcessedResponse<TTool> {
-    return {type: "error", error, rawResponse: raw};
+    return {type: Bleakai.RESPONSE_TYPE_ERROR, error, rawResponse: raw};
   }
 
   private createToolCallResponse(
@@ -268,6 +288,6 @@ export class Bleakai<TTool> {
     args: any,
     tool?: TTool // <-- Accepts the generic tool
   ): ProcessedResponse<TTool> {
-    return {type: "tool_call", toolName, args, data, rawResponse: raw, tool};
+    return {type: Bleakai.RESPONSE_TYPE_TOOL_CALL, toolName, args, data, rawResponse: raw, tool};
   }
 }
