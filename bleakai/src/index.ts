@@ -65,11 +65,11 @@ export class Bleakai<TTool> {
   private async _request(
     request: StreamRequest
   ): Promise<ProcessedResponse<TTool>[]> {
-    return this.stream(request);
+    return this.send(request);
   }
 
   /** Non-streaming: waits for full response */
-  async stream(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
+  async send(request: StreamRequest): Promise<ProcessedResponse<TTool>[]> {
     // Include thread_id in the request if it exists
     const requestWithThreadId = {
       ...request,
