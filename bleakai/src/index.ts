@@ -10,21 +10,12 @@ export interface BleakaiConfig<TTool> {
   };
 }
 
-export interface StreamRequest {
-  input: string;
-  command?: {
-    resume?: string;
-  };
-  thread_id?: string;
-  retry?: boolean;
-}
-
 export interface CustomToolProps {
   args: unknown;
   onResume: (resumeData: string) => Promise<void>;
 }
 
-export type ResponseType = "tool_call" | "message" | "error" | "other";
+export type MessageType = "tool_call" | "message" | "error" | "other";
 export type MessageSender = "user" | "ai" | "system";
 
 // Define the exact shape of API responses
@@ -53,9 +44,9 @@ type ApiResponse = {
 };
 
 export interface ProcessedResponse<TTool> {
-  type: ResponseType;
+  type: MessageType;
   toolName?: string;
-  args?: any;
+  args?: any; // The args of the tool, they can be anything
   data?: ApiContent | unknown;
   error?: unknown;
   rawResponse?: ApiResponse | null;
