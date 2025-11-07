@@ -1,3 +1,4 @@
+import {HumanMessage} from "@langchain/core/messages";
 import {Bleakai, type CustomToolProps, type ProcessedResponse} from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
@@ -109,10 +110,8 @@ export default function CustomChat() {
     if (!inputText.trim() || isLoading) return;
 
     const userInput = inputText;
-    appendResponse({
-      type: "message",
-      content: userInput
-    });
+    const userMessage = new HumanMessage(userInput);
+    appendResponse(userMessage);
     setInputText("");
     await handleRequest(() => thread.send(userInput));
   };
@@ -138,10 +137,10 @@ export default function CustomChat() {
         className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white"
       >
         {responses.map((response, index) => {
-          if (response.type === "message") {
+          if (response.type === "human" || response.type === "ai") {
             // Determine if user or AI based on message type
-            const isUserMessage = response.message?.type === "human";
-            const isAiMessage = response.message?.type === "ai";
+            const isUserMessage = response.type === "human";
+            const isAiMessage = response.type === "ai";
 
             return (
               <div

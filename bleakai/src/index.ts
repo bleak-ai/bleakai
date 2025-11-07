@@ -1,4 +1,4 @@
-import {BaseMessage} from "@langchain/core/messages";
+import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
 // Single graph update from astream()
 interface GraphUpdate {
@@ -28,11 +28,11 @@ export interface CustomToolProps {
 }
 
 export interface ProcessedResponse<TTool> {
-  type: "tool_call" | "message" | "error" | "other";
+  type: MessageType;
   message?: BaseMessage;
   toolName?: string;
   args?: Record<string, any>;
-  content?: string;
+  content?: string | any;
   tool?: TTool;
   error?: unknown;
 }
