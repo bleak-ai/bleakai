@@ -1,3 +1,15 @@
+import {BaseMessage} from "@langchain/core/messages";
+
+// Single graph update from astream()
+interface GraphUpdate {
+  [nodeKey: string]: {
+    messages?: BaseMessage[];
+  };
+}
+
+// Array of updates from the backend
+type StreamResponse = GraphUpdate[];
+
 export interface BleakaiConfig<TTool> {
   tools?: Record<string, TTool>;
   requestHandlers: {
@@ -15,44 +27,14 @@ export interface CustomToolProps {
   onResume: (resumeData: string) => Promise<void>;
 }
 
-export type MessageType = "tool_call" | "message" | "error" | "other";
-export type MessageSender = "user" | "ai" | "system";
-
-// Define the exact shape of API responses
-interface ToolCall {
-  name: string;
-  args: any; // Keep this as 'any' since tool args vary
-}
-
-interface ApiMessage {
-  kwargs?: {
-    content?: string;
-    tool_calls?: ToolCall[];
-  };
-  content?: string;
-  tool_calls?: ToolCall[];
-}
-
-interface ApiContent {
-  messages?: ApiMessage[];
-}
-
-type ApiResponse = {
-  error?: string;
-} & {
-  [key: string]: ApiContent;
-};
-
 export interface ProcessedResponse<TTool> {
-  type: MessageType;
+  type: "tool_call" | "message" | "error" | "other";
+  message?: BaseMessage;
   toolName?: string;
-  args?: any; // The args of the tool, they can be anything
-  data?: ApiContent | unknown;
-  error?: unknown;
-  rawResponse?: ApiResponse | null;
-  tool?: TTool;
+  args?: Record<string, any>;
   content?: string;
-  sender?: MessageSender;
+  tool?: TTool;
+  error?: unknown;
 }
 
 export class Thread<TTool> {
@@ -64,7 +46,6 @@ export class Thread<TTool> {
     this.threadId = threadId;
   }
 
-  /** Send a message with the given input text */
   async send(input: string): Promise<ProcessedResponse<TTool>[]> {
     return this.bleakai.handleCustomRequest(
       this.bleakai
@@ -73,32 +54,24 @@ export class Thread<TTool> {
     );
   }
 
-  /** Resume a previous session with the given resume data */
   async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
     return this.bleakai.handleCustomRequest(
       this.bleakai.getRequestHandlers().handleResume(resumeData, this.threadId)
     );
   }
 
-  /** Retry the last request */
   async retry(): Promise<ProcessedResponse<TTool>[]> {
     return this.bleakai.handleCustomRequest(
       this.bleakai.getRequestHandlers().handleRetry(this.threadId)
     );
   }
 
-  /** Get the thread ID */
   getId(): string {
     return this.threadId;
   }
 }
+
 export class Bleakai<TTool> {
-  // Tool Constants
-  private static readonly UNKNOWN_TOOL_NAME = "unknown_tool";
-
-  // API Constants
-  private static readonly ERROR_KEY = "error";
-
   private tools: Record<string, TTool>;
   private requestHandlers: BleakaiConfig<TTool>["requestHandlers"];
 
@@ -107,24 +80,20 @@ export class Bleakai<TTool> {
     this.requestHandlers = config.requestHandlers;
   }
 
-  /** Create a new thread with the given thread ID */
   createThread(threadId: string): Thread<TTool> {
     return new Thread(this, threadId);
   }
 
-  /** Get request handlers (accessible to Thread class) */
   getRequestHandlers() {
     return this.requestHandlers;
   }
 
-  /** Handle custom request (accessible to Thread class) */
   async handleCustomRequest(
     responsePromise: Promise<Response>
   ): Promise<ProcessedResponse<TTool>[]> {
     try {
       const response = await responsePromise;
 
-      // Check HTTP status
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
@@ -132,23 +101,18 @@ export class Bleakai<TTool> {
       const text = await response.text();
       return this.processChunk(text);
     } catch (error) {
-      // Return error as ProcessedResponse for consistent handling
+      console.error("Error handling custom request:", error);
       return [
         {
           type: "error",
-          error: error instanceof Error ? error.message : String(error),
-          rawResponse: null
+          error: error instanceof Error ? error.message : String(error)
         }
       ];
     }
   }
 
-  // -------------------------------
-  // Shared internal utilities
-  // -------------------------------
-
   private processChunk(chunk: string): ProcessedResponse<TTool>[] {
-    let data: ApiResponse | ApiResponse[];
+    let data: StreamResponse | GraphUpdate;
     try {
       data = JSON.parse(chunk);
     } catch {
@@ -156,132 +120,70 @@ export class Bleakai<TTool> {
       return [];
     }
 
+    // Handle both array format (multiple updates) and single update
     const items = Array.isArray(data) ? data : [data];
     return items
-      .map((item) => this.parseResponse(item))
+      .flatMap((item) => this.parseUpdate(item))
       .filter(Boolean) as ProcessedResponse<TTool>[];
   }
 
-  private parseResponse(
-    response: ApiResponse
-  ): ProcessedResponse<TTool> | null {
-    // Handle direct error format {error: "...", type: "error"}
-    if (response?.[Bleakai.ERROR_KEY]) {
-      return {
-        type: "error",
-        rawResponse: response,
-        error: response[Bleakai.ERROR_KEY]
-      };
-    }
+  private parseUpdate(update: GraphUpdate): ProcessedResponse<TTool>[] {
+    const responses: ProcessedResponse<TTool>[] = [];
 
-    // 1️⃣ Extract the top-level key and content safely
-    const keys = Object.keys(response ?? {}).filter(
-      (key) => key !== Bleakai.ERROR_KEY
-    );
-    const key = keys[0];
-    const content = key ? response[key] : undefined;
+    for (const [nodeKey, nodeOutput] of Object.entries(update)) {
+      if (!nodeOutput || !nodeOutput.messages) {
+        continue;
+      }
+      const messages = nodeOutput.messages;
 
-    if (!content) {
-      console.warn("parseResponse: Missing or invalid content:", response);
-      return null;
-    }
-
-    try {
-      // 2️⃣ Extract possible data
-      const toolCalls = this.extractToolCalls(content);
-
-      // 3️⃣ Handle tool call responses
-      if (toolCalls.length > 0) {
-        const {name, args} = toolCalls[0];
-        const tool = this.tools?.[name];
-        return {
-          type: "tool_call",
-          rawResponse: response,
-          data: content,
-          toolName: name,
-          args,
-          tool
-        };
+      if (!Array.isArray(messages)) {
+        continue;
       }
 
-      const messageContent = this.extractContent(content);
+      for (const message of messages) {
+        const toolCalls = this.getToolCalls(message);
 
-      // 4️⃣ Handle message responses
-      if (messageContent) {
-        return {
-          type: "message",
-          rawResponse: response,
-          data: content,
-          content: messageContent,
-          sender: "ai"
-        };
-      }
-
-      // 5️⃣ Handle unrecognized responses
-      return {
-        type: "other",
-        rawResponse: response,
-        data: content
-      };
-    } catch (error) {
-      console.error("parseResponse: Error while processing response:", error);
-      return {
-        type: "error",
-        rawResponse: response,
-        error
-      };
-    }
-  }
-
-  /**
-   * Extracts tool calls from response content
-   * @param content - The response content containing messages
-   * @returns Array of tool calls with name and args
-   */
-  private extractToolCalls(content: ApiContent): ToolCall[] {
-    const messages = content?.messages ?? [];
-
-    if (!Array.isArray(messages)) {
-      return [];
-    }
-
-    try {
-      return messages.flatMap((msg: ApiMessage) => {
-        const calls = msg?.kwargs?.tool_calls ?? msg?.tool_calls ?? [];
-        return calls
-          .filter((c): c is ToolCall => !!c?.args) // Type guard
-          .map((c) => ({
-            name: c.name ?? Bleakai.UNKNOWN_TOOL_NAME,
-            args: c.args
-          }));
-      });
-    } catch (err) {
-      console.error("Error extracting tool calls:", err);
-      return [];
-    }
-  }
-
-  /**
-   * Extracts content from response messages
-   * @param content - The response content containing messages
-   * @returns Extracted content string or null if not found
-   */
-  private extractContent(content: ApiContent): string | null {
-    const messages = content?.messages;
-
-    if (!Array.isArray(messages)) return null;
-
-    try {
-      for (const msg of messages) {
-        const extractedContent = msg?.kwargs?.content ?? msg?.content;
-        if (typeof extractedContent === "string" && extractedContent.trim()) {
-          return extractedContent.trim();
+        if (toolCalls.length > 0) {
+          for (const toolCall of toolCalls) {
+            responses.push({
+              type: "tool_call",
+              message,
+              toolName: toolCall.name,
+              args: toolCall.args,
+              tool: this.tools?.[toolCall.name]
+            });
+          }
+        } else if (
+          typeof message.content === "string" &&
+          message.content.trim()
+        ) {
+          responses.push({
+            type: "message",
+            message,
+            content: message.content.trim()
+          });
+        } else {
+          responses.push({
+            type: "other",
+            message
+          });
         }
       }
-      return null;
-    } catch (err) {
-      console.error("Error extracting content:", err);
-      return null;
     }
+
+    return responses.length > 0 ? responses : [];
+  }
+
+  private getToolCalls(
+    message: any // Raw JSON object
+  ): Array<{name: string; args: Record<string, any>}> {
+    const toolCalls = message.kwargs?.tool_calls || [];
+
+    return toolCalls
+      .filter((tc: any) => tc.name && tc.args)
+      .map((tc: any) => ({
+        name: tc.name,
+        args: tc.args as Record<string, any>
+      }));
   }
 }

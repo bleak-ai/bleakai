@@ -60,19 +60,20 @@ export default function CustomChat() {
     try {
       appendResponse(await action());
     } catch (error) {
-      appendResponse({type: "error", data: error});
+      appendResponse({
+        type: "error",
+        error: error instanceof Error ? error.message : String(error)
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Custom request handlers
   const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
         tools: toolComponentMap,
         requestHandlers: {
-          // Sends a message to the thread and streams the response
           handleMessageStream: async (input: string, threadId?: string) => {
             return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
               method: "POST",
@@ -80,7 +81,6 @@ export default function CustomChat() {
               body: JSON.stringify({input})
             });
           },
-          // Resumes the conversation with provided data
           handleResume: async (resumeData: string, threadId?: string) => {
             return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
               method: "POST",
@@ -88,7 +88,6 @@ export default function CustomChat() {
               body: JSON.stringify({resume: resumeData})
             });
           },
-          // Retries the last action in the thread
           handleRetry: async (threadId?: string) => {
             return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
               method: "POST",
@@ -98,7 +97,7 @@ export default function CustomChat() {
           }
         }
       }),
-    [] // Empty dependency array: recreates only on mount
+    []
   );
 
   const threadRef = React.useRef(
@@ -109,24 +108,23 @@ export default function CustomChat() {
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    const userInput = inputText;
     appendResponse({
       type: "message",
-      data: inputText,
-      content: inputText,
-      sender: "user"
+      content: userInput
     });
     setInputText("");
-    await handleRequest(() => thread.send(inputText));
+    await handleRequest(() => thread.send(userInput));
   };
 
   const handleResume = async (resumeData: string) => {
-    handleRequest(() => thread.resume(resumeData));
+    await handleRequest(() => thread.resume(resumeData));
   };
 
   const handleRetry = async () => {
-    handleRequest(() => thread.retry());
+    await handleRequest(() => thread.retry());
   };
-
+  console.log(responses);
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col font-sans bg-white">
       <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
@@ -135,11 +133,15 @@ export default function CustomChat() {
         </h1>
       </div>
 
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white"
+      >
         {responses.map((response, index) => {
           if (response.type === "message") {
-            const isUserMessage = response.sender === "user";
-            const isAiMessage = response.sender === "ai";
+            // Determine if user or AI based on message type
+            const isUserMessage = response.message?.type === "human";
+            const isAiMessage = response.message?.type === "ai";
 
             return (
               <div
@@ -157,8 +159,7 @@ export default function CustomChat() {
                 >
                   <div className="flex-1 leading-relaxed break-words">
                     <pre className="font-mono text-sm whitespace-pre-wrap">
-                      {response.content ||
-                        JSON.stringify(response.data, null, 2)}
+                      {response.content}
                     </pre>
                   </div>
                 </div>
@@ -179,9 +180,7 @@ export default function CustomChat() {
                         Error
                       </div>
                       <div className="text-gray-600 text-sm">
-                        {response.error?.toString() ||
-                          response.data?.toString() ||
-                          "Unknown error occurred"}
+                        {response.error?.toString() || "Unknown error occurred"}
                       </div>
                     </div>
                     <Button
