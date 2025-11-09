@@ -21,3 +21,7 @@ test:
 
 backend-dev: 
 	@ cd backend && uv run uvicorn main:app --reload  
+
+
+test-backend: 
+	@ cd backend && uv run uvicorn testbasic:app --reload  
