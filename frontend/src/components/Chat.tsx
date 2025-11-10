@@ -58,7 +58,7 @@ export default function CustomChat() {
     () =>
       new Bleakai<ToolComponent>({
         tools: toolComponentMap,
-        apiUrl: "http://localhost:8000"
+        apiUrl: "http://localhost:8000/threads/${this.threadId}/stream"
       }),
     []
   );
@@ -174,7 +174,11 @@ export default function CustomChat() {
                 } else if (Array.isArray(data)) {
                   // Process LangChain messages for tool calls
                   for (const item of data) {
-                    if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
+                    if (
+                      item.lc === 1 &&
+                      item.type === "constructor" &&
+                      item.kwargs
+                    ) {
                       const kwargs = item.kwargs;
 
                       // Handle tool calls
@@ -192,7 +196,11 @@ export default function CustomChat() {
                       }
 
                       // Handle regular content
-                      if (kwargs.content && typeof kwargs.content === "string" && kwargs.content.trim()) {
+                      if (
+                        kwargs.content &&
+                        typeof kwargs.content === "string" &&
+                        kwargs.content.trim()
+                      ) {
                         processedResponses.push({
                           type: "ai",
                           content: kwargs.content

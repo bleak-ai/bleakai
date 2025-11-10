@@ -28,6 +28,39 @@ export interface ProcessedResponse<TTool> {
   error?: unknown;
 }
 
+function* processMessagesData(messages: any[]): Generator<StreamEvent> {
+  for (const item of messages) {
+    if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
+      console.log("Processing item:", item);
+      const kwargs = item.kwargs;
+
+      // Handle tool calls
+      const toolCalls = kwargs.tool_calls || [];
+      for (const toolCall of toolCalls) {
+        if (toolCall.name && toolCall.args) {
+          yield {
+            type: "tool_call",
+            toolName: toolCall.name,
+            toolArgs: toolCall.args
+          };
+        }
+      }
+
+      // Handle regular content
+      if (
+        kwargs.content &&
+        typeof kwargs.content === "string" &&
+        kwargs.content.trim()
+      ) {
+        yield {
+          type: "content",
+          content: kwargs.content.trim()
+        };
+      }
+    }
+  }
+}
+
 export class Thread<TTool> {
   private bleakai: Bleakai<TTool>;
   private threadId: string;
@@ -41,18 +74,21 @@ export class Thread<TTool> {
     return this.threadId;
   }
 
-  async *sendMessage(input: string, requestBody?: any): AsyncGenerator<StreamEvent> {
+  async *sendMessage(
+    input: string,
+    requestBody?: any
+  ): AsyncGenerator<StreamEvent> {
     const apiUrl = this.bleakai.getApiUrl();
-    const url = `${apiUrl}/basic/threads/${this.threadId}/stream`;
+    const url = `${apiUrl}`;
 
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody || { input })
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(requestBody || {input})
     });
 
     if (!response.ok) {
-      yield { type: "error", error: `HTTP error! status: ${response.status}` };
+      yield {type: "error", error: `HTTP error! status: ${response.status}`};
       return;
     }
 
@@ -60,7 +96,7 @@ export class Thread<TTool> {
     const decoder = new TextDecoder();
 
     if (!reader) {
-      yield { type: "error", error: "Response body is not readable" };
+      yield {type: "error", error: "Response body is not readable"};
       return;
     }
 
@@ -68,61 +104,52 @@ export class Thread<TTool> {
 
     try {
       while (true) {
-        const { done, value } = await reader.read();
+        const {done, value} = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, {stream: true});
         const lines = chunk.split("\n");
 
         for (const line of lines) {
           if (line.trim()) {
             try {
               // Skip SSE comments and empty lines
-              if (line.startsWith(':')) continue;
+              if (line.startsWith(":")) continue;
 
               // Parse SSE data lines (remove "data: " prefix)
-              let jsonData = line;
-              if (line.startsWith('data: ')) {
-                jsonData = line.substring(6);
+              let jsonResponse = line;
+              if (line.startsWith("data: ")) {
+                jsonResponse = line.substring(6);
               }
 
-              const data = JSON.parse(jsonData);
+              const response = JSON.parse(jsonResponse);
 
-              if (data.type === "done") {
+              if (response.type === "done") {
                 if (accumulatedContent.trim()) {
-                  yield { type: "content", content: accumulatedContent.trim() };
+                  yield {type: "content", content: accumulatedContent.trim()};
                 }
-                yield { type: "done" };
+                yield {type: "done"};
                 return;
-              } else if (data.type === "error") {
+              } else if (response.type === "error") {
                 yield {
                   type: "error",
-                  error: data.error || "An unknown error occurred"
+                  error: response.error || "An unknown error occurred"
                 };
                 return;
-              } else if (Array.isArray(data)) {
-                // Process LangChain messages
-                for (const item of data) {
-                  if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
-                    const kwargs = item.kwargs;
+              } else if (Array.isArray(response)) {
+                const [type, data] = response;
+                console.log("Received data:", data);
+                console.log("Received type:", type);
 
-                    // Handle tool calls
-                    const toolCalls = kwargs.tool_calls || [];
-                    for (const toolCall of toolCalls) {
-                      if (toolCall.name && toolCall.args) {
-                        yield {
-                          type: "tool_call",
-                          toolName: toolCall.name,
-                          toolArgs: toolCall.args
-                        };
-                      }
-                    }
-
-                    // Handle regular content
-                    if (kwargs.content && typeof kwargs.content === "string" && kwargs.content.trim()) {
-                      accumulatedContent += kwargs.content;
-                    }
-                  }
+                switch (type) {
+                  case "messages":
+                    accumulatedContent = "";
+                    yield* processMessagesData(data);
+                    break;
+                  case "updates":
+                    const innerMessages = Object.values(data)[0]?.messages;
+                    console.log("update!", innerMessages);
+                    yield* processMessagesData(innerMessages);
                 }
               }
             } catch (parseError) {

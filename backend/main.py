@@ -48,7 +48,7 @@ async def run_graph(graph_input, config, thread_id, use_basic_graph=False):
         try:
             selected_graph = basic_graph if use_basic_graph else graph
             async for update in selected_graph.astream(
-                graph_input, config, stream_mode="messages"
+                graph_input, config, stream_mode=["updates"]
             ):
                 # Convert update to JSON and send as SSE
                 update_data = dumpd(update)

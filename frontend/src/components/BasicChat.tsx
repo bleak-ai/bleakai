@@ -61,10 +61,14 @@ function useChatHandler() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Memoize the Bleakai instance so it's not recreated on every render
-  const bleakai = useMemo(() => new Bleakai({
-    tools: {},
-    apiUrl: "http://localhost:8000"
-  }), []);
+  const bleakai = useMemo(
+    () =>
+      new Bleakai({
+        tools: {},
+        apiUrl: "http://localhost:8000/basic/threads/${this.threadId}/stream"
+      }),
+    []
+  );
 
   // Use a ref to hold the thread instance, ensuring it persists across renders
   const threadRef = useRef(bleakai.createThread(`basic-chat-${Date.now()}`));
