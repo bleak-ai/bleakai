@@ -73,30 +73,30 @@ export default function CustomChat() {
   const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
-        tools: toolComponentMap,
-        requestHandlers: {
-          handleMessageStream: async (input: string, threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({input})
-            });
-          },
-          handleResume: async (resumeData: string, threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({resume: resumeData})
-            });
-          },
-          handleRetry: async (threadId?: string) => {
-            return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
-              method: "POST",
-              headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({})
-            });
-          }
-        }
+        tools: toolComponentMap
+        // requestHandlers: {
+        //   handleMessageStream: async (input: string, threadId?: string) => {
+        //     return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
+        //       method: "POST",
+        //       headers: {"Content-Type": "application/json"},
+        //       body: JSON.stringify({input})
+        //     });
+        //   },
+        //   handleResume: async (resumeData: string, threadId?: string) => {
+        //     return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
+        //       method: "POST",
+        //       headers: {"Content-Type": "application/json"},
+        //       body: JSON.stringify({resume: resumeData})
+        //     });
+        //   },
+        //   handleRetry: async (threadId?: string) => {
+        //     return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
+        //       method: "POST",
+        //       headers: {"Content-Type": "application/json"},
+        //       body: JSON.stringify({})
+        //     });
+        //   }
+        // }
       }),
     []
   );
@@ -113,15 +113,36 @@ export default function CustomChat() {
     const userMessage = new HumanMessage(userInput);
     appendResponse(userMessage);
     setInputText("");
-    await handleRequest(() => thread.send(userInput));
+    const responses = fetch(
+      `http://localhost:8000/threads/${thread.getId()}/stream`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({input: userInput})
+      }
+    );
+    const processedResponses = bleakai.handleCustomRequest(responses);
+    await handleRequest(() => processedResponses);
   };
 
   const handleResume = async (resumeData: string) => {
-    await handleRequest(() => thread.resume(resumeData));
+    const responses = fetch(
+      `http://localhost:8000/threads/${thread.getId()}/resume`,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({resume: resumeData})
+      }
+    );
+
+    const processedResponses = bleakai.handleCustomRequest(responses);
+
+    await handleRequest(() => processedResponses);
   };
 
   const handleRetry = async () => {
-    await handleRequest(() => thread.retry());
+    alert("not implemented yet");
+    // await handleRequest(() => thread.retry());
   };
   console.log(responses);
   return (

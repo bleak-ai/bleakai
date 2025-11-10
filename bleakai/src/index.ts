@@ -12,14 +12,6 @@ type StreamResponse = GraphUpdate[];
 
 export interface BleakaiConfig<TTool> {
   tools?: Record<string, TTool>;
-  requestHandlers: {
-    handleMessageStream: (
-      input: string,
-      threadId?: string
-    ) => Promise<Response>;
-    handleResume: (resumeData: string, threadId?: string) => Promise<Response>;
-    handleRetry: (threadId?: string) => Promise<Response>;
-  };
 }
 
 export interface CustomToolProps {
@@ -46,26 +38,8 @@ export class Thread<TTool> {
     this.threadId = threadId;
   }
 
-  async send(input: string): Promise<ProcessedResponse<TTool>[]> {
-    return this.bleakai.handleCustomRequest(
-      this.bleakai
-        .getRequestHandlers()
-        .handleMessageStream(input, this.threadId)
-    );
-  }
-
-  async resume(resumeData: string): Promise<ProcessedResponse<TTool>[]> {
-    return this.bleakai.handleCustomRequest(
-      this.bleakai.getRequestHandlers().handleResume(resumeData, this.threadId)
-    );
-  }
-
-  async retry(): Promise<ProcessedResponse<TTool>[]> {
-    return this.bleakai.handleCustomRequest(
-      this.bleakai.getRequestHandlers().handleRetry(this.threadId)
-    );
-  }
-
+  
+  
   getId(): string {
     return this.threadId;
   }
@@ -73,21 +47,16 @@ export class Thread<TTool> {
 
 export class Bleakai<TTool> {
   private tools: Record<string, TTool>;
-  private requestHandlers: BleakaiConfig<TTool>["requestHandlers"];
 
   constructor(config: BleakaiConfig<TTool>) {
     this.tools = config.tools || {};
-    this.requestHandlers = config.requestHandlers;
   }
 
   createThread(threadId: string): Thread<TTool> {
     return new Thread(this, threadId);
   }
 
-  getRequestHandlers() {
-    return this.requestHandlers;
-  }
-
+  
   async handleCustomRequest(
     responsePromise: Promise<Response>
   ): Promise<ProcessedResponse<TTool>[]> {
