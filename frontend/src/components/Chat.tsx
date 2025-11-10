@@ -58,7 +58,7 @@ export default function CustomChat() {
     () =>
       new Bleakai<ToolComponent>({
         tools: toolComponentMap,
-        apiUrl: "http://localhost:8000/threads/${this.threadId}/stream"
+        apiUrl: "http://localhost:8000"
       }),
     []
   );
@@ -78,7 +78,10 @@ export default function CustomChat() {
 
     setIsLoading(true);
     try {
-      const messageGenerator = thread.sendMessage(userInput);
+      const messageGenerator = thread.sendMessage(
+        userInput,
+        `threads/${thread.getId()}/stream`
+      );
       const processedResponses: ProcessedResponse<ToolComponent>[] = [];
 
       for await (const event of messageGenerator) {

@@ -65,13 +65,14 @@ function useChatHandler() {
     () =>
       new Bleakai({
         tools: {},
-        apiUrl: "http://localhost:8000/basic/threads/${this.threadId}/stream"
+        apiUrl: "http://localhost:8000"
       }),
     []
   );
 
   // Use a ref to hold the thread instance, ensuring it persists across renders
   const threadRef = useRef(bleakai.createThread(`basic-chat-${Date.now()}`));
+  const thread = threadRef.current;
 
   const handleSendMessage = useCallback(async () => {
     if (!inputText.trim() || isLoading) return;
@@ -82,7 +83,10 @@ function useChatHandler() {
     setIsLoading(true);
 
     try {
-      const messageGenerator = threadRef.current.sendMessage(inputText);
+      const messageGenerator = threadRef.current.sendMessage(
+        inputText,
+        `basic/threads/${thread.getId()}/stream`
+      );
       let aiMessageContent = "";
 
       for await (const event of messageGenerator) {

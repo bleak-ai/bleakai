@@ -76,11 +76,12 @@ export class Thread<TTool> {
 
   async *sendMessage(
     input: string,
+    url: string,
     requestBody?: any
   ): AsyncGenerator<StreamEvent> {
     const apiUrl = this.bleakai.getApiUrl();
 
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${apiUrl}/${url}`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(requestBody || {input})
