@@ -1,8 +1,8 @@
-from os import error
+import json
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
 from langchain_core.load import dumpd
 from langchain_core.messages import (
     ToolCall,
@@ -42,19 +42,35 @@ class BleakResponse(BaseModel):
 
 
 async def run_graph(graph_input, config, thread_id, use_basic_graph=False):
-    """Run the graph and return JSON response with consistent envelope."""
-    try:
-        selected_graph = basic_graph if use_basic_graph else graph
-        updates = [
-            dumpd(u)
-            async for u in selected_graph.astream(
-                graph_input, config, stream_mode="updates"
-            )
-        ]
-        print("updates", updates)
-        return JSONResponse(content=updates)
-    except Exception:
-        return JSONResponse(content=error, status_code=500)
+    """Run the graph and return streaming response."""
+
+    async def generate_stream():
+        try:
+            selected_graph = basic_graph if use_basic_graph else graph
+            async for update in selected_graph.astream(
+                graph_input, config, stream_mode="messages"
+            ):
+                # Convert update to JSON and send as SSE
+                update_data = dumpd(update)
+                yield f"data: {json.dumps(update_data)}\n\n"
+
+            # Send completion event
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+        except Exception as e:
+            # Send error event
+            error_data = {"type": "error", "error": str(e)}
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream; charset=utf-8",
+        },
+    )
 
 
 # Endpoint for starting/continuing a conversation

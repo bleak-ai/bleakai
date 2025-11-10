@@ -1,17 +1,16 @@
 import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
-// Single graph update from astream()
-interface GraphUpdate {
-  [nodeKey: string]: {
-    messages?: BaseMessage[];
-  };
+export interface StreamEvent {
+  type: "content" | "tool_call" | "done" | "error";
+  content?: string;
+  toolName?: string;
+  toolArgs?: any;
+  error?: string;
 }
-
-// Array of updates from the backend
-type StreamResponse = GraphUpdate[];
 
 export interface BleakaiConfig<TTool> {
   tools?: Record<string, TTool>;
+  apiUrl?: string;
 }
 
 export interface CustomToolProps {
@@ -38,123 +37,124 @@ export class Thread<TTool> {
     this.threadId = threadId;
   }
 
-  
-  
   getId(): string {
     return this.threadId;
+  }
+
+  async *sendMessage(input: string, requestBody?: any): AsyncGenerator<StreamEvent> {
+    const apiUrl = this.bleakai.getApiUrl();
+    const url = `${apiUrl}/basic/threads/${this.threadId}/stream`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody || { input })
+    });
+
+    if (!response.ok) {
+      yield { type: "error", error: `HTTP error! status: ${response.status}` };
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      yield { type: "error", error: "Response body is not readable" };
+      return;
+    }
+
+    let accumulatedContent = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              // Skip SSE comments and empty lines
+              if (line.startsWith(':')) continue;
+
+              // Parse SSE data lines (remove "data: " prefix)
+              let jsonData = line;
+              if (line.startsWith('data: ')) {
+                jsonData = line.substring(6);
+              }
+
+              const data = JSON.parse(jsonData);
+
+              if (data.type === "done") {
+                if (accumulatedContent.trim()) {
+                  yield { type: "content", content: accumulatedContent.trim() };
+                }
+                yield { type: "done" };
+                return;
+              } else if (data.type === "error") {
+                yield {
+                  type: "error",
+                  error: data.error || "An unknown error occurred"
+                };
+                return;
+              } else if (Array.isArray(data)) {
+                // Process LangChain messages
+                for (const item of data) {
+                  if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
+                    const kwargs = item.kwargs;
+
+                    // Handle tool calls
+                    const toolCalls = kwargs.tool_calls || [];
+                    for (const toolCall of toolCalls) {
+                      if (toolCall.name && toolCall.args) {
+                        yield {
+                          type: "tool_call",
+                          toolName: toolCall.name,
+                          toolArgs: toolCall.args
+                        };
+                      }
+                    }
+
+                    // Handle regular content
+                    if (kwargs.content && typeof kwargs.content === "string" && kwargs.content.trim()) {
+                      accumulatedContent += kwargs.content;
+                    }
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.error("Failed to parse stream data:", parseError);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
   }
 }
 
 export class Bleakai<TTool> {
   private tools: Record<string, TTool>;
+  private apiUrl: string;
 
-  constructor(config: BleakaiConfig<TTool>) {
+  constructor(config: BleakaiConfig<TTool> = {}) {
     this.tools = config.tools || {};
+    this.apiUrl = config.apiUrl || "http://localhost:8000";
+  }
+
+  getApiUrl(): string {
+    return this.apiUrl;
   }
 
   createThread(threadId: string): Thread<TTool> {
     return new Thread(this, threadId);
   }
 
-  
-  async handleCustomRequest(
-    responsePromise: Promise<Response>
-  ): Promise<ProcessedResponse<TTool>[]> {
-    try {
-      const response = await responsePromise;
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
-
-      const text = await response.text();
-      return this.processChunk(text);
-    } catch (error) {
-      console.error("Error handling custom request:", error);
-      return [
-        {
-          type: "error",
-          error: error instanceof Error ? error.message : String(error)
-        }
-      ];
-    }
-  }
-
-  private processChunk(chunk: string): ProcessedResponse<TTool>[] {
-    let data: StreamResponse | GraphUpdate;
-    try {
-      data = JSON.parse(chunk);
-    } catch {
-      console.warn("Skipping invalid JSON chunk:", chunk);
-      return [];
-    }
-
-    // Handle both array format (multiple updates) and single update
-    const items = Array.isArray(data) ? data : [data];
-    return items
-      .flatMap((item) => this.parseUpdate(item))
-      .filter(Boolean) as ProcessedResponse<TTool>[];
-  }
-
-  private parseUpdate(update: GraphUpdate): ProcessedResponse<TTool>[] {
-    const responses: ProcessedResponse<TTool>[] = [];
-
-    for (const [nodeKey, nodeOutput] of Object.entries(update)) {
-      if (!nodeOutput || !nodeOutput.messages) {
-        continue;
-      }
-      const messages = nodeOutput.messages;
-
-      if (!Array.isArray(messages)) {
-        continue;
-      }
-
-      for (const message of messages) {
-        const messageRaw = message as any; // Access raw JSON object for kwargs
-        const toolCalls = this.getToolCalls(messageRaw);
-
-        if (toolCalls.length > 0) {
-          for (const toolCall of toolCalls) {
-            responses.push({
-              type: "tool_call",
-              message,
-              toolName: toolCall.name,
-              args: toolCall.args,
-              tool: this.tools?.[toolCall.name]
-            });
-          }
-        } else if (
-          typeof message.content === "string" &&
-          message.content.trim()
-        ) {
-          responses.push({
-            type: "message",
-            message,
-            content: message.content.trim()
-          });
-        } else {
-          responses.push({
-            type: "other",
-            message,
-            content: messageRaw.kwargs.content
-          });
-        }
-      }
-    }
-
-    return responses.length > 0 ? responses : [];
-  }
-
-  private getToolCalls(
-    message: any // Raw JSON object
-  ): Array<{name: string; args: Record<string, any>}> {
-    const toolCalls = message.kwargs?.tool_calls || [];
-
-    return toolCalls
-      .filter((tc: any) => tc.name && tc.args)
-      .map((tc: any) => ({
-        name: tc.name,
-        args: tc.args as Record<string, any>
-      }));
+  getTools(): Record<string, TTool> {
+    return this.tools;
   }
 }

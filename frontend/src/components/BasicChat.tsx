@@ -1,6 +1,6 @@
 "use client";
 
-import {Bleakai, type ProcessedResponse} from "bleakai";
+import {Bleakai} from "bleakai";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 //==============================================================================
@@ -21,8 +21,6 @@ interface ChatMessage {
   content: string;
   error?: string;
 }
-
-const API_BASE_URL = "http://localhost:8000";
 
 //==============================================================================
 // 2. MAIN COMPONENT (Clean, readable, and focused on layout)
@@ -63,7 +61,10 @@ function useChatHandler() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Memoize the Bleakai instance so it's not recreated on every render
-  const bleakai = useMemo(() => new Bleakai({tools: {}}), []);
+  const bleakai = useMemo(() => new Bleakai({
+    tools: {},
+    apiUrl: "http://localhost:8000"
+  }), []);
 
   // Use a ref to hold the thread instance, ensuring it persists across renders
   const threadRef = useRef(bleakai.createThread(`basic-chat-${Date.now()}`));
@@ -77,41 +78,38 @@ function useChatHandler() {
     setIsLoading(true);
 
     try {
-      const threadId = threadRef.current.getId();
-      const response = fetch(
-        `${API_BASE_URL}/basic/threads/${threadId}/stream`,
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({input: userMessage.content})
-        }
-      );
+      const messageGenerator = threadRef.current.sendMessage(inputText);
+      let aiMessageContent = "";
 
-      const processedResponses = await bleakai.handleCustomRequest(response);
-
-      const newAiMessages = processedResponses.map(
-        (res: ProcessedResponse<any>): ChatMessage => {
-          switch (res.type) {
-            case "ai":
-            case "other":
-              return {type: "ai", content: res.content};
-            case "error":
-              return {
-                type: "error",
-                content: "",
-                error: res.error?.toString() ?? "An unknown error occurred"
-              };
-            default:
-              // Fallback for any unexpected response types
-              return {
+      for await (const event of messageGenerator) {
+        switch (event.type) {
+          case "content":
+            aiMessageContent += event.content || "";
+            break;
+          case "tool_call":
+            aiMessageContent += `🔧 Using ${event.toolName}...\n`;
+            break;
+          case "done": {
+            if (aiMessageContent.trim()) {
+              const aiMessage: ChatMessage = {
                 type: "ai",
-                content: "Received an unsupported response type."
+                content: aiMessageContent.trim()
               };
+              setMessages((prev) => [...prev, aiMessage]);
+            }
+            break;
+          }
+          case "error": {
+            const errorMessage: ChatMessage = {
+              type: "error",
+              content: "",
+              error: event.error || "An unknown error occurred"
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+            break;
           }
         }
-      );
-
-      setMessages((prev) => [...prev, ...newAiMessages]);
+      }
     } catch (error) {
       const errorMessage: ChatMessage = {
         type: "error",
@@ -122,7 +120,7 @@ function useChatHandler() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputText, isLoading, bleakai]);
+  }, [inputText, isLoading]);
 
   return {
     messages,

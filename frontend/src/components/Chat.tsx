@@ -54,49 +54,11 @@ export default function CustomChat() {
       ...(Array.isArray(response) ? response : [response])
     ]);
 
-  const handleRequest = async (
-    action: () => Promise<ProcessedResponse<ToolComponent>[]>
-  ) => {
-    setIsLoading(true);
-    try {
-      appendResponse(await action());
-    } catch (error) {
-      appendResponse({
-        type: "error",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const bleakai = React.useMemo(
     () =>
       new Bleakai<ToolComponent>({
-        tools: toolComponentMap
-        // requestHandlers: {
-        //   handleMessageStream: async (input: string, threadId?: string) => {
-        //     return fetch(`http://localhost:8000/threads/${threadId}/stream`, {
-        //       method: "POST",
-        //       headers: {"Content-Type": "application/json"},
-        //       body: JSON.stringify({input})
-        //     });
-        //   },
-        //   handleResume: async (resumeData: string, threadId?: string) => {
-        //     return fetch(`http://localhost:8000/threads/${threadId}/resume`, {
-        //       method: "POST",
-        //       headers: {"Content-Type": "application/json"},
-        //       body: JSON.stringify({resume: resumeData})
-        //     });
-        //   },
-        //   handleRetry: async (threadId?: string) => {
-        //     return fetch(`http://localhost:8000/threads/${threadId}/retry`, {
-        //       method: "POST",
-        //       headers: {"Content-Type": "application/json"},
-        //       body: JSON.stringify({})
-        //     });
-        //   }
-        // }
+        tools: toolComponentMap,
+        apiUrl: "http://localhost:8000"
       }),
     []
   );
@@ -113,31 +75,151 @@ export default function CustomChat() {
     const userMessage = new HumanMessage(userInput);
     appendResponse(userMessage);
     setInputText("");
-    const responses = fetch(
-      `http://localhost:8000/threads/${thread.getId()}/stream`,
-      {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({input: userInput})
+
+    setIsLoading(true);
+    try {
+      const messageGenerator = thread.sendMessage(userInput);
+      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
+
+      for await (const event of messageGenerator) {
+        switch (event.type) {
+          case "content": {
+            if (event.content?.trim()) {
+              processedResponses.push({
+                type: "ai",
+                content: event.content
+              });
+            }
+            break;
+          }
+          case "tool_call": {
+            if (event.toolName && event.toolArgs) {
+              const ToolComponent = toolComponentMap[event.toolName];
+              processedResponses.push({
+                type: "tool_call",
+                toolName: event.toolName,
+                args: event.toolArgs,
+                tool: ToolComponent
+              });
+            }
+            break;
+          }
+          case "error": {
+            processedResponses.push({
+              type: "error",
+              error: event.error || "An unknown error occurred"
+            });
+            break;
+          }
+        }
       }
-    );
-    const processedResponses = bleakai.handleCustomRequest(responses);
-    await handleRequest(() => processedResponses);
+
+      appendResponse(processedResponses);
+    } catch (error) {
+      appendResponse({
+        type: "error",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResume = async (resumeData: string) => {
-    const responses = fetch(
-      `http://localhost:8000/threads/${thread.getId()}/resume`,
-      {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({resume: resumeData})
+    setIsLoading(true);
+    try {
+      // Create a custom request for resume functionality
+      const response = await fetch(
+        `${bleakai.getApiUrl()}/threads/${thread.getId()}/resume`,
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({resume: resumeData})
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    );
 
-    const processedResponses = bleakai.handleCustomRequest(responses);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-    await handleRequest(() => processedResponses);
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
+
+      try {
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, {stream: true});
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const data = JSON.parse(line);
+
+                if (data.type === "done") {
+                  break;
+                } else if (data.type === "error") {
+                  processedResponses.push({
+                    type: "error",
+                    error: data.error || "An unknown error occurred"
+                  });
+                } else if (Array.isArray(data)) {
+                  // Process LangChain messages for tool calls
+                  for (const item of data) {
+                    if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
+                      const kwargs = item.kwargs;
+
+                      // Handle tool calls
+                      const toolCalls = kwargs.tool_calls || [];
+                      for (const toolCall of toolCalls) {
+                        if (toolCall.name && toolCall.args) {
+                          const ToolComponent = toolComponentMap[toolCall.name];
+                          processedResponses.push({
+                            type: "tool_call",
+                            toolName: toolCall.name,
+                            args: toolCall.args,
+                            tool: ToolComponent
+                          });
+                        }
+                      }
+
+                      // Handle regular content
+                      if (kwargs.content && typeof kwargs.content === "string" && kwargs.content.trim()) {
+                        processedResponses.push({
+                          type: "ai",
+                          content: kwargs.content
+                        });
+                      }
+                    }
+                  }
+                }
+              } catch (parseError) {
+                console.error("Failed to parse stream data:", parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      appendResponse(processedResponses);
+    } catch (error) {
+      appendResponse({
+        type: "error",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRetry = async () => {
@@ -161,7 +243,6 @@ export default function CustomChat() {
           if (response.type === "human" || response.type === "ai") {
             // Determine if user or AI based on message type
             const isUserMessage = response.type === "human";
-            const isAiMessage = response.type === "ai";
 
             return (
               <div
