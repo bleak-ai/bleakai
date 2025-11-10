@@ -141,7 +141,8 @@ export class Bleakai<TTool> {
       }
 
       for (const message of messages) {
-        const toolCalls = this.getToolCalls(message);
+        const messageRaw = message as any; // Access raw JSON object for kwargs
+        const toolCalls = this.getToolCalls(messageRaw);
 
         if (toolCalls.length > 0) {
           for (const toolCall of toolCalls) {
@@ -165,7 +166,8 @@ export class Bleakai<TTool> {
         } else {
           responses.push({
             type: "other",
-            message
+            message,
+            content: messageRaw.kwargs.content
           });
         }
       }
