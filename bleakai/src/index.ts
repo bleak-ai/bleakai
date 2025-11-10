@@ -79,7 +79,6 @@ export class Thread<TTool> {
     requestBody?: any
   ): AsyncGenerator<StreamEvent> {
     const apiUrl = this.bleakai.getApiUrl();
-    const url = `${apiUrl}`;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -147,9 +146,16 @@ export class Thread<TTool> {
                     yield* processMessagesData(data);
                     break;
                   case "updates":
-                    const innerMessages = Object.values(data)[0]?.messages;
-                    console.log("update!", innerMessages);
-                    yield* processMessagesData(innerMessages);
+                    const nodeName = Object.values(data)[0];
+                    const innerMessages =
+                      nodeName &&
+                      typeof nodeName === "object" &&
+                      "messages" in nodeName
+                        ? nodeName.messages
+                        : undefined;
+                    if (innerMessages && Array.isArray(innerMessages)) {
+                      yield* processMessagesData(innerMessages);
+                    }
                 }
               }
             } catch (parseError) {
