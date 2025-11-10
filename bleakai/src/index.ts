@@ -157,7 +157,11 @@ export class Thread<TTool> {
                     if (innerMessages && Array.isArray(innerMessages)) {
                       yield* processMessagesData(innerMessages);
                     }
+                    break;
                 }
+              } else {
+                // Handle raw LangChain messages (for resume endpoints)
+                yield* processMessagesData([response]);
               }
             } catch (parseError) {
               console.error("Failed to parse stream data:", parseError);

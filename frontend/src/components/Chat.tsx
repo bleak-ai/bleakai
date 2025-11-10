@@ -131,95 +131,44 @@ export default function CustomChat() {
   const handleResume = async (resumeData: string) => {
     setIsLoading(true);
     try {
-      // Create a custom request for resume functionality
-      const response = await fetch(
-        `${bleakai.getApiUrl()}/threads/${thread.getId()}/resume`,
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({resume: resumeData})
-        }
+      const messageGenerator = thread.sendMessage(
+        "", // empty input since we're resuming
+        `threads/${thread.getId()}/resume`,
+        { resume: resumeData }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("Response body is not readable");
-      }
-
       const processedResponses: ProcessedResponse<ToolComponent>[] = [];
 
-      try {
-        while (true) {
-          const {done, value} = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, {stream: true});
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.trim()) {
-              try {
-                const data = JSON.parse(line);
-
-                if (data.type === "done") {
-                  break;
-                } else if (data.type === "error") {
-                  processedResponses.push({
-                    type: "error",
-                    error: data.error || "An unknown error occurred"
-                  });
-                } else if (Array.isArray(data)) {
-                  // Process LangChain messages for tool calls
-                  for (const item of data) {
-                    if (
-                      item.lc === 1 &&
-                      item.type === "constructor" &&
-                      item.kwargs
-                    ) {
-                      const kwargs = item.kwargs;
-
-                      // Handle tool calls
-                      const toolCalls = kwargs.tool_calls || [];
-                      for (const toolCall of toolCalls) {
-                        if (toolCall.name && toolCall.args) {
-                          const ToolComponent = toolComponentMap[toolCall.name];
-                          processedResponses.push({
-                            type: "tool_call",
-                            toolName: toolCall.name,
-                            args: toolCall.args,
-                            tool: ToolComponent
-                          });
-                        }
-                      }
-
-                      // Handle regular content
-                      if (
-                        kwargs.content &&
-                        typeof kwargs.content === "string" &&
-                        kwargs.content.trim()
-                      ) {
-                        processedResponses.push({
-                          type: "ai",
-                          content: kwargs.content
-                        });
-                      }
-                    }
-                  }
-                }
-              } catch (parseError) {
-                console.error("Failed to parse stream data:", parseError);
-              }
+      for await (const event of messageGenerator) {
+        switch (event.type) {
+          case "content": {
+            if (event.content?.trim()) {
+              processedResponses.push({
+                type: "ai",
+                content: event.content
+              });
             }
+            break;
+          }
+          case "tool_call": {
+            if (event.toolName && event.toolArgs) {
+              const ToolComponent = toolComponentMap[event.toolName];
+              processedResponses.push({
+                type: "tool_call",
+                toolName: event.toolName,
+                args: event.toolArgs,
+                tool: ToolComponent
+              });
+            }
+            break;
+          }
+          case "error": {
+            processedResponses.push({
+              type: "error",
+              error: event.error || "An unknown error occurred"
+            });
+            break;
           }
         }
-      } finally {
-        reader.releaseLock();
       }
 
       appendResponse(processedResponses);
