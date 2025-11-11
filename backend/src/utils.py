@@ -19,15 +19,10 @@ from src.state import Question
 )
 def ask_questions_tool(questions: List[Question], last_message: Any) -> Any:
     """"""
-    print("questions", questions)
-    print("last_message", last_message)
-
     answers_str = interrupt({"questions": questions})
 
     answers = json.loads(answers_str)
     user_answers_message = HumanMessage(content=answers)
-
-    print("user_answers_message", user_answers_message)
 
     questions_with_answers = format_questions_with_answers(
         last_message, user_answers_message
@@ -84,7 +79,7 @@ def evaluate_prompt_tool(
         return Command(
             goto="ask_questions_node",
             update={
-                "messages": [tool_call_message],
+                "messages": [AIMessage(content=missing_info)],
             },
         )
     elif next_step == "test":

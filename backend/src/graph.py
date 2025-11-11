@@ -94,6 +94,8 @@ async def tool_supervisor(
     messages = state.get("messages", "")
     last_message = messages[-1]
 
+    print("messages length", len(messages))
+
     for tool_call in last_message.tool_calls:
         tool_args = tool_call["args"]
         tool_name = tool_call["name"]
@@ -128,6 +130,8 @@ async def tool_supervisor(
                     "tool_call_message": last_message,
                 }
             )
+        else:
+            raise ValueError(f"Unknown tool name: {tool_name}")
 
 
 async def ask_questions_node(
@@ -146,7 +150,10 @@ async def ask_questions_node(
         last_message.tool_calls
         and last_message.tool_calls[0]["name"] == "evaluate_prompt_tool"
     ):
-        missing_info = f""" IDEAS TO DO THE QUESTIONS ABOUT: {last_message.tool_calls[0]["args"]["missing_info"]} """
+        missing_info_args = last_message
+        missing_info_desc = (
+            f""" IDEAS TO DO THE QUESTIONS ABOUT: {missing_info_args} """
+        )
 
     prompt = CLARIFY_PROMPT.format(prompt=current_prompt, missing_info=missing_info)
 
