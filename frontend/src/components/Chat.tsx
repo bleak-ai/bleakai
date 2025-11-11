@@ -134,7 +134,7 @@ export default function CustomChat() {
       const messageGenerator = thread.sendMessage(
         "", // empty input since we're resuming
         `threads/${thread.getId()}/resume`,
-        { resume: resumeData }
+        {resume: resumeData}
       );
       const processedResponses: ProcessedResponse<ToolComponent>[] = [];
 
@@ -182,6 +182,8 @@ export default function CustomChat() {
     }
   };
 
+  const hasMessages = responses.length > 0;
+
   const handleRetry = async () => {
     alert("not implemented yet");
     // await handleRequest(() => thread.retry());
@@ -199,6 +201,8 @@ export default function CustomChat() {
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 bg-white"
       >
+        {!hasMessages && !isLoading && <EmptyState />}
+
         {responses.map((response, index) => {
           if (response.type === "human" || response.type === "ai") {
             // Determine if user or AI based on message type
@@ -334,3 +338,14 @@ export default function CustomChat() {
     </div>
   );
 }
+
+const EmptyState = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="text-center text-gray-500">
+      <p className="text-lg font-medium mb-2">Start a conversation</p>
+      <p className="text-sm">
+        Type a message below to begin chatting with the AI
+      </p>
+    </div>
+  </div>
+);
