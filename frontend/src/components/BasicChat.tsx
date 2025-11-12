@@ -1,6 +1,6 @@
 "use client";
 
-import {BleakAI, type EventHandlers} from "bleakai";
+import {BleakAI} from "bleakai";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 //==============================================================================
@@ -85,38 +85,19 @@ function useChatHandler() {
     setIsLoading(true);
 
     try {
-      let aiMessageContent = "";
-
-      const handlers: EventHandlers = {
-        onInput: (content) => {
-          console.log("input", content);
-
-          aiMessageContent += content || "";
-
-          const aiMessage: ChatMessage = {
-            type: "ai",
-            content
-          };
-          setMessages((prev) => [...prev, aiMessage]);
-        },
-        onToolCall: (toolName) => {
-          aiMessageContent += `🔧 Using ${toolName}...\n`;
-        },
-        onError: (error) => {
-          const errorMessage: ChatMessage = {
-            type: "error",
-            content: "",
-            error
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        }
-      };
-
-      await conversationRef.current.processEvents(
+      const responses = await conversation.processEvents(
         inputText,
-        `basic/threads/${conversation.getId()}/stream`,
-        handlers
+        `basic/threads/${conversation.getId()}/stream`
       );
+
+      const aiMessages: ChatMessage[] = responses.map((response) => ({
+        type: "ai",
+        content: response.content
+      }));
+
+      console.log("aiMessages", aiMessages);
+
+      setMessages((prev) => [...prev, ...aiMessages]);
     } catch (error) {
       const errorMessage: ChatMessage = {
         type: "error",
@@ -211,7 +192,6 @@ const MessageList = ({
   isLoading: boolean;
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -220,7 +200,6 @@ const MessageList = ({
   }, [messages, isLoading]);
 
   const hasMessages = messages.length > 0;
-
   return (
     <div
       ref={scrollRef}
