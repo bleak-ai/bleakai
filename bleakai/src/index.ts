@@ -1,30 +1,30 @@
 import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
-export interface StreamEvent {
-  type: "message" | "tool_call" | "error";
+export interface ConversationEvent {
+  type: "input" | "tool_call" | "error";
   content?: string;
   toolName?: string;
   toolArgs?: any;
   error?: string;
 }
 
-export interface BleakaiConfig<TTool> {
+export interface BleakAIConfig<TTool> {
   tools?: Record<string, TTool>;
   apiUrl?: string;
 }
 
-export interface CustomToolProps {
-  args: unknown;
+export interface ToolExecutionProps {
+  args: any;
   onResume: (resumeData: string) => Promise<void>;
 }
 
-export interface MessageHandlers {
-  onMessage?: (content: string) => void | Promise<void>;
+export interface EventHandlers {
+  onInput?: (content: string) => void | Promise<void>;
   onToolCall?: (toolName: string, toolArgs: any) => void | Promise<void>;
   onError?: (error: string) => void | Promise<void>;
 }
 
-export interface ProcessedResponse<TTool> {
+export interface ConversationResponse<TTool> {
   type: MessageType;
   message?: BaseMessage;
   toolName?: string;
@@ -34,7 +34,7 @@ export interface ProcessedResponse<TTool> {
   error?: unknown;
 }
 
-function* processMessagesData(messages: any[]): Generator<StreamEvent> {
+function* parseLangChainEvents(messages: any[]): Generator<ConversationEvent> {
   for (const item of messages) {
     if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
       const kwargs = item.kwargs;
@@ -58,7 +58,7 @@ function* processMessagesData(messages: any[]): Generator<StreamEvent> {
         kwargs.content.trim()
       ) {
         yield {
-          type: "message",
+          type: "input",
           content: kwargs.content.trim()
         };
       }
@@ -66,25 +66,25 @@ function* processMessagesData(messages: any[]): Generator<StreamEvent> {
   }
 }
 
-export class Thread<TTool> {
-  private bleakai: Bleakai<TTool>;
-  private threadId: string;
+export class Conversation<TTool> {
+  private bleakAI: BleakAI<TTool>;
+  private conversationId: string;
 
-  constructor(bleakai: Bleakai<TTool>, threadId: string) {
-    this.bleakai = bleakai;
-    this.threadId = threadId;
+  constructor(bleakAI: BleakAI<TTool>, conversationId: string) {
+    this.bleakAI = bleakAI;
+    this.conversationId = conversationId;
   }
 
   getId(): string {
-    return this.threadId;
+    return this.conversationId;
   }
 
-  async *sendMessage(
+  async *sendInput(
     input: string,
     url: string,
     requestBody?: any
-  ): AsyncGenerator<StreamEvent> {
-    const apiUrl = this.bleakai.getApiUrl();
+  ): AsyncGenerator<ConversationEvent> {
+    const apiUrl = this.bleakAI.getApiUrl();
 
     const response = await fetch(`${apiUrl}/${url}`, {
       method: "POST",
@@ -149,7 +149,7 @@ export class Thread<TTool> {
                 switch (type) {
                   case "messages":
                     accumulatedContent = "";
-                    yield* processMessagesData(data);
+                    yield* parseLangChainEvents(data);
                     break;
                   case "updates":
                     const nodeName = Object.values(data)[0];
@@ -160,13 +160,13 @@ export class Thread<TTool> {
                         ? nodeName.messages
                         : undefined;
                     if (innerMessages && Array.isArray(innerMessages)) {
-                      yield* processMessagesData(innerMessages);
+                      yield* parseLangChainEvents(innerMessages);
                     }
                     break;
                 }
               } else {
                 // Handle raw LangChain messages (for resume endpoints)
-                yield* processMessagesData([response]);
+                yield* parseLangChainEvents([response]);
               }
             } catch (parseError) {
               console.error("Failed to parse stream data:", parseError);
@@ -179,17 +179,17 @@ export class Thread<TTool> {
     }
   }
 
-  async processStream(
+  async processEvents(
     input: string,
     url: string,
-    handlers: MessageHandlers,
+    handlers: EventHandlers,
     requestBody?: any
   ): Promise<void> {
-    for await (const event of this.sendMessage(input, url, requestBody)) {
+    for await (const event of this.sendInput(input, url, requestBody)) {
       switch (event.type) {
-        case "message":
-          if (handlers.onMessage && event.content) {
-            await handlers.onMessage(event.content);
+        case "input":
+          if (handlers.onInput && event.content) {
+            await handlers.onInput(event.content);
           }
           break;
         case "tool_call":
@@ -207,11 +207,11 @@ export class Thread<TTool> {
   }
 }
 
-export class MessageHandler {
-  private handlers: MessageHandlers = {};
+export class EventHandler {
+  private handlers: EventHandlers = {};
 
-  onMessage(callback: (content: string) => void | Promise<void>): this {
-    this.handlers.onMessage = callback;
+  onInput(callback: (content: string) => void | Promise<void>): this {
+    this.handlers.onInput = callback;
     return this;
   }
 
@@ -227,16 +227,16 @@ export class MessageHandler {
     return this;
   }
 
-  getHandlers(): MessageHandlers {
+  getHandlers(): EventHandlers {
     return {...this.handlers};
   }
 }
 
-export class Bleakai<TTool> {
+export class BleakAI<TTool> {
   private tools: Record<string, TTool>;
   private apiUrl: string;
 
-  constructor(config: BleakaiConfig<TTool> = {}) {
+  constructor(config: BleakAIConfig<TTool> = {}) {
     this.tools = config.tools || {};
     this.apiUrl = config.apiUrl || "http://localhost:8000";
   }
@@ -245,8 +245,8 @@ export class Bleakai<TTool> {
     return this.apiUrl;
   }
 
-  createThread(threadId: string): Thread<TTool> {
-    return new Thread(this, threadId);
+  createConversation(conversationId: string): Conversation<TTool> {
+    return new Conversation(this, conversationId);
   }
 
   getTools(): Record<string, TTool> {

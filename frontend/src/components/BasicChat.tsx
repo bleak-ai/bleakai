@@ -1,6 +1,6 @@
 "use client";
 
-import {Bleakai, type MessageHandlers} from "bleakai";
+import {BleakAI, type EventHandlers} from "bleakai";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 //==============================================================================
@@ -60,19 +60,21 @@ function useChatHandler() {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Memoize the Bleakai instance so it's not recreated on every render
-  const bleakai = useMemo(
+  // Memoize the BleakAI instance so it's not recreated on every render
+  const bleakAI = useMemo(
     () =>
-      new Bleakai({
+      new BleakAI({
         tools: {},
         apiUrl: "http://localhost:8000"
       }),
     []
   );
 
-  // Use a ref to hold the thread instance, ensuring it persists across renders
-  const threadRef = useRef(bleakai.createThread(`basic-chat-${Date.now()}`));
-  const thread = threadRef.current;
+  // Use a ref to hold the conversation instance, ensuring it persists across renders
+  const conversationRef = useRef(
+    bleakAI.createConversation(`basic-chat-${Date.now()}`)
+  );
+  const conversation = conversationRef.current;
 
   const handleSendMessage = useCallback(async () => {
     if (!inputText.trim() || isLoading) return;
@@ -85,9 +87,9 @@ function useChatHandler() {
     try {
       let aiMessageContent = "";
 
-      const handlers: MessageHandlers = {
-        onMessage: (content) => {
-          console.log("message", content);
+      const handlers: EventHandlers = {
+        onInput: (content) => {
+          console.log("input", content);
 
           aiMessageContent += content || "";
 
@@ -110,9 +112,9 @@ function useChatHandler() {
         }
       };
 
-      await threadRef.current.processStream(
+      await conversationRef.current.processEvents(
         inputText,
-        `basic/threads/${thread.getId()}/stream`,
+        `basic/threads/${conversation.getId()}/stream`,
         handlers
       );
     } catch (error) {
@@ -125,7 +127,7 @@ function useChatHandler() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputText, isLoading]);
+  }, [inputText, isLoading, conversation]);
 
   return {
     messages,

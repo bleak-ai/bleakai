@@ -1,9 +1,9 @@
 "use client";
 
-import type {CustomToolProps} from "bleakai";
+import type {ToolExecutionProps} from "bleakai";
 import {Lightbulb} from "lucide-react";
 
-export const SuggestImprovementsTool = ({args}: CustomToolProps) => {
+export const SuggestImprovementsTool = ({args}: ToolExecutionProps) => {
   const {improvements} = args;
 
   return (

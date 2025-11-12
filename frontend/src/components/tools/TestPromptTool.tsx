@@ -2,14 +2,14 @@
 
 import {Button} from "@/components/ui/button";
 import {Textarea} from "@/components/ui/textarea";
+import type {ToolExecutionProps} from "bleakai";
 import {ArrowUp, MessageSquare} from "lucide-react";
 import {useState} from "react";
 
 // 1. Import the updated props interface
-import type {CustomToolProps} from "bleakai"; // Assuming bleakai is aliased or path is correct
 
 // 2. Change the function signature to destructure `args` instead of `argsText`
-export const TestPromptTool = ({args, onResume}: CustomToolProps) => {
+export const TestPromptTool = ({args, onResume}: ToolExecutionProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
 

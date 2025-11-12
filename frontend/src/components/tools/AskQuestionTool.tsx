@@ -1,12 +1,12 @@
 "use client";
 
-import type {CustomToolProps} from "bleakai";
+import type {ToolExecutionProps} from "bleakai";
 import {useState} from "react";
 import Questions, {type QuestionType} from "../Questions";
 import {Button} from "../ui/button";
 import {Card, CardContent} from "../ui/card";
 
-export const AskQuestionTool = ({args, onResume}: CustomToolProps) => {
+export const AskQuestionTool = ({args, onResume}: ToolExecutionProps) => {
   const questions: QuestionType[] = args.questions;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});

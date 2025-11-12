@@ -2,11 +2,11 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import type {CustomToolProps} from "bleakai";
+import type {ToolExecutionProps} from "bleakai";
 import {BarChart3, Check, Copy, MessageCircle, Play} from "lucide-react";
 import {useState} from "react";
 
-export const CreatePromptTool = ({args, onResume}: CustomToolProps) => {
+export const CreatePromptTool = ({args, onResume}: ToolExecutionProps) => {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   // const {sendCommand, isLoading} = useToolCommand();

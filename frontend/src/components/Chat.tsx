@@ -1,5 +1,10 @@
 import {HumanMessage} from "@langchain/core/messages";
-import {Bleakai, type CustomToolProps, type ProcessedResponse, type MessageHandlers} from "bleakai";
+import {
+  BleakAI,
+  type ConversationResponse,
+  type EventHandlers,
+  type ToolExecutionProps
+} from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
 
@@ -21,12 +26,12 @@ const toolComponentMap: Record<string, ToolComponent> = {
 };
 
 // 2. Define the specific type for your tool. This will be used as the generic parameter.
-type ToolComponent = ComponentType<CustomToolProps>;
+type ToolComponent = ComponentType<ToolExecutionProps>;
 
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
   const [responses, setResponses] = React.useState<
-    ProcessedResponse<ToolComponent>[]
+    ConversationResponse<ToolComponent>[]
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
@@ -46,30 +51,32 @@ export default function CustomChat() {
 
   const appendResponse = (
     response:
-      | ProcessedResponse<ToolComponent>
-      | ProcessedResponse<ToolComponent>[]
+      | ConversationResponse<ToolComponent>
+      | ConversationResponse<ToolComponent>[]
   ) =>
     setResponses((prev) => [
       ...prev,
       ...(Array.isArray(response) ? response : [response])
     ]);
 
-  const bleakai = React.useMemo(
+  const bleakAI = React.useMemo(
     () =>
-      new Bleakai<ToolComponent>({
+      new BleakAI<ToolComponent>({
         tools: toolComponentMap,
         apiUrl: "http://localhost:8000"
       }),
     []
   );
 
-  const threadRef = React.useRef(
-    bleakai.createThread(`chat-session-${Date.now()}`)
+  const conversationRef = React.useRef(
+    bleakAI.createConversation(`chat-session-${Date.now()}`)
   );
-  const thread = threadRef.current;
+  const conversation = conversationRef.current;
 
-  const getMessageHandlers = (processedResponses: ProcessedResponse<ToolComponent>[]): MessageHandlers => ({
-    onMessage: (content) => {
+  const getEventHandlers = (
+    processedResponses: ConversationResponse<ToolComponent>[]
+  ): EventHandlers => ({
+    onInput: (content) => {
       if (content.trim()) {
         processedResponses.push({
           type: "ai",
@@ -106,12 +113,12 @@ export default function CustomChat() {
 
     setIsLoading(true);
     try {
-      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
-      const handlers = getMessageHandlers(processedResponses);
+      const processedResponses: ConversationResponse<ToolComponent>[] = [];
+      const handlers = getEventHandlers(processedResponses);
 
-      await thread.processStream(
+      await conversation.processEvents(
         userInput,
-        `threads/${thread.getId()}/stream`,
+        `threads/${conversation.getId()}/stream`,
         handlers
       );
 
@@ -129,12 +136,12 @@ export default function CustomChat() {
   const handleResume = async (resumeData: string) => {
     setIsLoading(true);
     try {
-      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
-      const handlers = getMessageHandlers(processedResponses);
+      const processedResponses: ConversationResponse<ToolComponent>[] = [];
+      const handlers = getEventHandlers(processedResponses);
 
-      await thread.processStream(
+      await conversation.processEvents(
         "", // empty input since we're resuming
-        `threads/${thread.getId()}/resume`,
+        `threads/${conversation.getId()}/resume`,
         handlers,
         {resume: resumeData}
       );

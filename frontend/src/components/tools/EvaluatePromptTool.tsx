@@ -2,11 +2,11 @@
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import type {CustomToolProps} from "bleakai";
+import type {ToolExecutionProps} from "bleakai";
 import {AlertCircle, ArrowRight, CheckCircle2, Zap} from "lucide-react";
 import {useState} from "react";
 
-export const EvaluatePromptTool = ({args, onResume}: CustomToolProps) => {
+export const EvaluatePromptTool = ({args, onResume}: ToolExecutionProps) => {
   const [submitted, setSubmitted] = useState(false);
 
   const completionLevel = parseInt(args.evaluation);
