@@ -30,7 +30,7 @@ type ToolComponent = ComponentType<ToolExecutionProps>;
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
   const [responses, setResponses] = React.useState<
-    ConversationResponse<ToolComponent>[]
+    ConversationResponse[]
   >([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
@@ -50,8 +50,8 @@ export default function CustomChat() {
 
   const appendResponse = (
     response:
-      | ConversationResponse<ToolComponent>
-      | ConversationResponse<ToolComponent>[]
+      | ConversationResponse
+      | ConversationResponse[]
   ) =>
     setResponses((prev) => [
       ...prev,
@@ -60,7 +60,7 @@ export default function CustomChat() {
 
   const bleakAI = React.useMemo(
     () =>
-      new BleakAI<ToolComponent>({
+      new BleakAI({
         tools: toolComponentMap,
         apiUrl: "http://localhost:8000"
       }),

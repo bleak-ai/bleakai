@@ -5,11 +5,12 @@ export interface ConversationEvent {
   content?: string;
   toolName?: string;
   toolArgs?: any;
+  tool?: any;
   error?: string;
 }
 
-export interface BleakAIConfig<TTool> {
-  tools?: Record<string, TTool>;
+export interface BleakAIConfig {
+  tools?: Record<string, any>;
   apiUrl?: string;
 }
 
@@ -24,13 +25,13 @@ export interface EventHandlers {
   onError?: (error: string) => void | Promise<void>;
 }
 
-export interface ConversationResponse<TTool> {
+export interface ConversationResponse {
   type: MessageType;
   message?: BaseMessage;
   toolName?: string;
   args?: Record<string, any>;
   content?: string | any;
-  tool?: TTool;
+  tool?: any;
   error?: unknown;
 }
 
@@ -66,11 +67,11 @@ function* parseLangChainEvents(messages: any[]): Generator<ConversationEvent> {
   }
 }
 
-export class Conversation<TTool> {
-  private bleakAI: BleakAI<TTool>;
+export class Conversation {
+  private bleakAI: BleakAI;
   private conversationId: string;
 
-  constructor(bleakAI: BleakAI<TTool>, conversationId: string) {
+  constructor(bleakAI: BleakAI, conversationId: string) {
     this.bleakAI = bleakAI;
     this.conversationId = conversationId;
   }
@@ -183,8 +184,8 @@ export class Conversation<TTool> {
     input: string,
     url: string,
     requestBody?: any
-  ): Promise<ConversationResponse<TTool>[]> {
-    const responses: ConversationResponse<TTool>[] = [];
+  ): Promise<ConversationResponse[]> {
+    const responses: ConversationResponse[] = [];
 
     for await (const event of this.sendInput(input, url, requestBody)) {
       switch (event.type) {
@@ -245,11 +246,11 @@ export class EventHandler {
   }
 }
 
-export class BleakAI<TTool> {
-  private tools: Record<string, TTool>;
+export class BleakAI {
+  private tools: Record<string, any>;
   private apiUrl: string;
 
-  constructor(config: BleakAIConfig<TTool> = {}) {
+  constructor(config: BleakAIConfig = {}) {
     this.tools = config.tools || {};
     this.apiUrl = config.apiUrl || "http://localhost:8000";
   }
@@ -258,11 +259,11 @@ export class BleakAI<TTool> {
     return this.apiUrl;
   }
 
-  createConversation(conversationId: string): Conversation<TTool> {
+  createConversation(conversationId: string): Conversation {
     return new Conversation(this, conversationId);
   }
 
-  getTools(): Record<string, TTool> {
+  getTools(): Record<string, any> {
     return this.tools;
   }
 }
