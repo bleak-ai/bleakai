@@ -46,7 +46,6 @@ export default function CustomChat() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  
   const bleakAI = React.useMemo(
     () =>
       new BleakAI({
@@ -76,10 +75,7 @@ export default function CustomChat() {
         {input: userInput}
       );
 
-      setMessages((prev) => [
-        ...prev,
-        ...(Array.isArray(responses) ? responses : [responses])
-      ]);
+      setMessages((prev) => [...prev, ...responses]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
@@ -101,10 +97,7 @@ export default function CustomChat() {
         {resume: resumeData}
       );
 
-      setMessages((prev) => [
-        ...prev,
-        ...(Array.isArray(responses) ? responses : [responses])
-      ]);
+      setMessages((prev) => [...prev, ...responses]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
