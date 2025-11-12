@@ -29,7 +29,7 @@ type ToolComponent = ComponentType<ToolExecutionProps>;
 
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
-  const [responses, setResponses] = React.useState<ConversationResponse[]>([]);
+  const [messages, setMessages] = React.useState<ConversationResponse[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -44,16 +44,9 @@ export default function CustomChat() {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [responses, isLoading]);
+  }, [messages, isLoading]);
 
-  const appendResponse = (
-    response: ConversationResponse | ConversationResponse[]
-  ) =>
-    setResponses((prev) => [
-      ...prev,
-      ...(Array.isArray(response) ? response : [response])
-    ]);
-
+  
   const bleakAI = React.useMemo(
     () =>
       new BleakAI({
@@ -73,7 +66,7 @@ export default function CustomChat() {
 
     const userInput = inputText;
     const userMessage = new HumanMessage(userInput);
-    appendResponse(userMessage);
+    setMessages((prev) => [...prev, userMessage]);
     setInputText("");
 
     setIsLoading(true);
@@ -83,14 +76,18 @@ export default function CustomChat() {
         {input: userInput}
       );
 
-      console.log(responses);
-
-      appendResponse(responses);
+      setMessages((prev) => [
+        ...prev,
+        ...(Array.isArray(responses) ? responses : [responses])
+      ]);
     } catch (error) {
-      appendResponse({
-        type: "error",
-        error: error instanceof Error ? error.message : String(error)
-      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "error",
+          error: error instanceof Error ? error.message : String(error)
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -104,18 +101,24 @@ export default function CustomChat() {
         {resume: resumeData}
       );
 
-      appendResponse(responses);
+      setMessages((prev) => [
+        ...prev,
+        ...(Array.isArray(responses) ? responses : [responses])
+      ]);
     } catch (error) {
-      appendResponse({
-        type: "error",
-        error: error instanceof Error ? error.message : String(error)
-      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "error",
+          error: error instanceof Error ? error.message : String(error)
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const hasMessages = responses.length > 0;
+  const hasMessages = messages.length > 0;
 
   const handleRetry = async () => {
     alert("not implemented yet");
@@ -136,7 +139,7 @@ export default function CustomChat() {
       >
         {!hasMessages && !isLoading && <EmptyState />}
 
-        {responses.map((response, index) => {
+        {messages.map((response, index) => {
           if (response.type === "human" || response.type === "ai") {
             // Determine if user or AI based on message type
             const isUserMessage = response.type === "human";
