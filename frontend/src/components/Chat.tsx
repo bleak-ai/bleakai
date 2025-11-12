@@ -86,7 +86,7 @@ export default function CustomChat() {
 
       for await (const event of messageGenerator) {
         switch (event.type) {
-          case "content": {
+          case "message": {
             if (event.content?.trim()) {
               processedResponses.push({
                 type: "ai",
@@ -140,7 +140,7 @@ export default function CustomChat() {
 
       for await (const event of messageGenerator) {
         switch (event.type) {
-          case "content": {
+          case "message": {
             if (event.content?.trim()) {
               processedResponses.push({
                 type: "ai",

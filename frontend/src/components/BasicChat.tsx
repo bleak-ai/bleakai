@@ -91,7 +91,7 @@ function useChatHandler() {
 
       for await (const event of messageGenerator) {
         switch (event.type) {
-          case "content":
+          case "message":
             aiMessageContent += event.content || "";
             break;
           case "tool_call":

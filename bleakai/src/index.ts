@@ -1,7 +1,7 @@
 import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
 export interface StreamEvent {
-  type: "content" | "tool_call" | "done" | "error";
+  type: "message" | "tool_call" | "done" | "error";
   content?: string;
   toolName?: string;
   toolArgs?: any;
@@ -31,7 +31,6 @@ export interface ProcessedResponse<TTool> {
 function* processMessagesData(messages: any[]): Generator<StreamEvent> {
   for (const item of messages) {
     if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
-      console.log("Processing item:", item);
       const kwargs = item.kwargs;
 
       // Handle tool calls
@@ -53,7 +52,7 @@ function* processMessagesData(messages: any[]): Generator<StreamEvent> {
         kwargs.content.trim()
       ) {
         yield {
-          type: "content",
+          type: "message",
           content: kwargs.content.trim()
         };
       }
@@ -126,7 +125,7 @@ export class Thread<TTool> {
 
               if (response.type === "done") {
                 if (accumulatedContent.trim()) {
-                  yield {type: "content", content: accumulatedContent.trim()};
+                  yield {type: "message", content: accumulatedContent.trim()};
                 }
                 yield {type: "done"};
                 return;
@@ -138,8 +137,6 @@ export class Thread<TTool> {
                 return;
               } else if (Array.isArray(response)) {
                 const [type, data] = response;
-                console.log("Received data:", data);
-                console.log("Received type:", type);
 
                 switch (type) {
                   case "messages":
