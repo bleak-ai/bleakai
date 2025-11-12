@@ -90,19 +90,15 @@ function useChatHandler() {
           console.log("message", content);
 
           aiMessageContent += content || "";
+
+          const aiMessage: ChatMessage = {
+            type: "ai",
+            content
+          };
+          setMessages((prev) => [...prev, aiMessage]);
         },
         onToolCall: (toolName) => {
           aiMessageContent += `🔧 Using ${toolName}...\n`;
-        },
-        onDone: () => {
-          if (aiMessageContent.trim()) {
-            const aiMessage: ChatMessage = {
-              type: "ai",
-              content: aiMessageContent.trim()
-            };
-            console.log("done", aiMessage);
-            setMessages((prev) => [...prev, aiMessage]);
-          }
         },
         onError: (error) => {
           const errorMessage: ChatMessage = {

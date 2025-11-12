@@ -1,7 +1,7 @@
 import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
 export interface StreamEvent {
-  type: "message" | "tool_call" | "done" | "error";
+  type: "message" | "tool_call" | "error";
   content?: string;
   toolName?: string;
   toolArgs?: any;
@@ -21,7 +21,6 @@ export interface CustomToolProps {
 export interface MessageHandlers {
   onMessage?: (content: string) => void | Promise<void>;
   onToolCall?: (toolName: string, toolArgs: any) => void | Promise<void>;
-  onDone?: () => void | Promise<void>;
   onError?: (error: string) => void | Promise<void>;
 }
 
@@ -131,10 +130,12 @@ export class Thread<TTool> {
               const response = JSON.parse(jsonResponse);
 
               if (response.type === "done") {
-                if (accumulatedContent.trim()) {
-                  yield {type: "message", content: accumulatedContent.trim()};
-                }
-                yield {type: "done"};
+                // DO NOTHING
+
+                // if (accumulatedContent.trim()) {
+                //   yield {type: "message", content: accumulatedContent.trim()};
+                // }
+                // yield {type: "done"};
                 return;
               } else if (response.type === "error") {
                 yield {
@@ -196,11 +197,6 @@ export class Thread<TTool> {
             await handlers.onToolCall(event.toolName, event.toolArgs);
           }
           break;
-        case "done":
-          if (handlers.onDone) {
-            await handlers.onDone();
-          }
-          break;
         case "error":
           if (handlers.onError && event.error) {
             await handlers.onError(event.error);
@@ -219,13 +215,10 @@ export class MessageHandler {
     return this;
   }
 
-  onToolCall(callback: (toolName: string, toolArgs: any) => void | Promise<void>): this {
+  onToolCall(
+    callback: (toolName: string, toolArgs: any) => void | Promise<void>
+  ): this {
     this.handlers.onToolCall = callback;
-    return this;
-  }
-
-  onDone(callback: () => void | Promise<void>): this {
-    this.handlers.onDone = callback;
     return this;
   }
 
