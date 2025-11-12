@@ -86,8 +86,8 @@ function useChatHandler() {
 
     try {
       const responses = await conversation.processEvents(
-        inputText,
-        `basic/threads/${conversation.getId()}/stream`
+        `basic/threads/${conversation.getId()}/stream`,
+        {input: inputText}
       );
 
       const aiMessages: ChatMessage[] = responses.map((response) => ({

@@ -29,9 +29,7 @@ type ToolComponent = ComponentType<ToolExecutionProps>;
 
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
-  const [responses, setResponses] = React.useState<
-    ConversationResponse[]
-  >([]);
+  const [responses, setResponses] = React.useState<ConversationResponse[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -49,9 +47,7 @@ export default function CustomChat() {
   }, [responses, isLoading]);
 
   const appendResponse = (
-    response:
-      | ConversationResponse
-      | ConversationResponse[]
+    response: ConversationResponse | ConversationResponse[]
   ) =>
     setResponses((prev) => [
       ...prev,
@@ -83,8 +79,8 @@ export default function CustomChat() {
     setIsLoading(true);
     try {
       const responses = await conversation.processEvents(
-        userInput,
-        `threads/${conversation.getId()}/stream`
+        `threads/${conversation.getId()}/stream`,
+        {input: userInput}
       );
 
       console.log(responses);
@@ -104,7 +100,6 @@ export default function CustomChat() {
     setIsLoading(true);
     try {
       const responses = await conversation.processEvents(
-        "", // empty input since we're resuming
         `threads/${conversation.getId()}/resume`,
         {resume: resumeData}
       );

@@ -81,16 +81,15 @@ export class Conversation {
   }
 
   async *sendInput(
-    input: string,
     url: string,
-    requestBody?: any
+    body: Record<string, unknown>
   ): AsyncGenerator<ConversationEvent> {
     const apiUrl = this.bleakAI.getApiUrl();
 
     const response = await fetch(`${apiUrl}/${url}`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(requestBody || {input})
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -181,13 +180,12 @@ export class Conversation {
   }
 
   async processEvents(
-    input: string,
     url: string,
-    requestBody?: any
+    body: Record<string, unknown>
   ): Promise<ConversationResponse[]> {
     const responses: ConversationResponse[] = [];
 
-    for await (const event of this.sendInput(input, url, requestBody)) {
+    for await (const event of this.sendInput(url, body)) {
       switch (event.type) {
         case "input":
           if (event.content && event.content.trim()) {
