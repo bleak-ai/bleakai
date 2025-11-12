@@ -1,6 +1,14 @@
 {
   "name": "bleakai",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "description": "BleakAI SDK / library",
+  "type": "module",
+  "author": "Bernat Sampera",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bleak-ai/bleakai.git"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
