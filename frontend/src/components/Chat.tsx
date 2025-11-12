@@ -1,5 +1,5 @@
 import {HumanMessage} from "@langchain/core/messages";
-import {Bleakai, type CustomToolProps, type ProcessedResponse} from "bleakai";
+import {Bleakai, type CustomToolProps, type ProcessedResponse, type MessageHandlers} from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
 
@@ -68,6 +68,34 @@ export default function CustomChat() {
   );
   const thread = threadRef.current;
 
+  const getMessageHandlers = (processedResponses: ProcessedResponse<ToolComponent>[]): MessageHandlers => ({
+    onMessage: (content) => {
+      if (content.trim()) {
+        processedResponses.push({
+          type: "ai",
+          content
+        });
+      }
+    },
+    onToolCall: (toolName, toolArgs) => {
+      const ToolComponent = toolComponentMap[toolName];
+      if (ToolComponent) {
+        processedResponses.push({
+          type: "tool_call",
+          toolName,
+          args: toolArgs,
+          tool: ToolComponent
+        });
+      }
+    },
+    onError: (error) => {
+      processedResponses.push({
+        type: "error",
+        error
+      });
+    }
+  });
+
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
@@ -78,44 +106,14 @@ export default function CustomChat() {
 
     setIsLoading(true);
     try {
-      const messageGenerator = thread.sendMessage(
-        userInput,
-        `threads/${thread.getId()}/stream`
-      );
       const processedResponses: ProcessedResponse<ToolComponent>[] = [];
+      const handlers = getMessageHandlers(processedResponses);
 
-      for await (const event of messageGenerator) {
-        switch (event.type) {
-          case "message": {
-            if (event.content?.trim()) {
-              processedResponses.push({
-                type: "ai",
-                content: event.content
-              });
-            }
-            break;
-          }
-          case "tool_call": {
-            if (event.toolName && event.toolArgs) {
-              const ToolComponent = toolComponentMap[event.toolName];
-              processedResponses.push({
-                type: "tool_call",
-                toolName: event.toolName,
-                args: event.toolArgs,
-                tool: ToolComponent
-              });
-            }
-            break;
-          }
-          case "error": {
-            processedResponses.push({
-              type: "error",
-              error: event.error || "An unknown error occurred"
-            });
-            break;
-          }
-        }
-      }
+      await thread.processStream(
+        userInput,
+        `threads/${thread.getId()}/stream`,
+        handlers
+      );
 
       appendResponse(processedResponses);
     } catch (error) {
@@ -131,45 +129,15 @@ export default function CustomChat() {
   const handleResume = async (resumeData: string) => {
     setIsLoading(true);
     try {
-      const messageGenerator = thread.sendMessage(
+      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
+      const handlers = getMessageHandlers(processedResponses);
+
+      await thread.processStream(
         "", // empty input since we're resuming
         `threads/${thread.getId()}/resume`,
+        handlers,
         {resume: resumeData}
       );
-      const processedResponses: ProcessedResponse<ToolComponent>[] = [];
-
-      for await (const event of messageGenerator) {
-        switch (event.type) {
-          case "message": {
-            if (event.content?.trim()) {
-              processedResponses.push({
-                type: "ai",
-                content: event.content
-              });
-            }
-            break;
-          }
-          case "tool_call": {
-            if (event.toolName && event.toolArgs) {
-              const ToolComponent = toolComponentMap[event.toolName];
-              processedResponses.push({
-                type: "tool_call",
-                toolName: event.toolName,
-                args: event.toolArgs,
-                tool: ToolComponent
-              });
-            }
-            break;
-          }
-          case "error": {
-            processedResponses.push({
-              type: "error",
-              error: event.error || "An unknown error occurred"
-            });
-            break;
-          }
-        }
-      }
 
       appendResponse(processedResponses);
     } catch (error) {
@@ -188,7 +156,7 @@ export default function CustomChat() {
     alert("not implemented yet");
     // await handleRequest(() => thread.retry());
   };
-  console.log(responses);
+  // console.log(responses);
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col font-sans bg-white">
       <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">

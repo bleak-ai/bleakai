@@ -1,6 +1,6 @@
 "use client";
 
-import {Bleakai} from "bleakai";
+import {Bleakai, type MessageHandlers} from "bleakai";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 //==============================================================================
@@ -83,41 +83,42 @@ function useChatHandler() {
     setIsLoading(true);
 
     try {
-      const messageGenerator = threadRef.current.sendMessage(
-        inputText,
-        `basic/threads/${thread.getId()}/stream`
-      );
       let aiMessageContent = "";
 
-      for await (const event of messageGenerator) {
-        switch (event.type) {
-          case "message":
-            aiMessageContent += event.content || "";
-            break;
-          case "tool_call":
-            aiMessageContent += `🔧 Using ${event.toolName}...\n`;
-            break;
-          case "done": {
-            if (aiMessageContent.trim()) {
-              const aiMessage: ChatMessage = {
-                type: "ai",
-                content: aiMessageContent.trim()
-              };
-              setMessages((prev) => [...prev, aiMessage]);
-            }
-            break;
-          }
-          case "error": {
-            const errorMessage: ChatMessage = {
-              type: "error",
-              content: "",
-              error: event.error || "An unknown error occurred"
+      const handlers: MessageHandlers = {
+        onMessage: (content) => {
+          console.log("message", content);
+
+          aiMessageContent += content || "";
+        },
+        onToolCall: (toolName) => {
+          aiMessageContent += `🔧 Using ${toolName}...\n`;
+        },
+        onDone: () => {
+          if (aiMessageContent.trim()) {
+            const aiMessage: ChatMessage = {
+              type: "ai",
+              content: aiMessageContent.trim()
             };
-            setMessages((prev) => [...prev, errorMessage]);
-            break;
+            console.log("done", aiMessage);
+            setMessages((prev) => [...prev, aiMessage]);
           }
+        },
+        onError: (error) => {
+          const errorMessage: ChatMessage = {
+            type: "error",
+            content: "",
+            error
+          };
+          setMessages((prev) => [...prev, errorMessage]);
         }
-      }
+      };
+
+      await threadRef.current.processStream(
+        inputText,
+        `basic/threads/${thread.getId()}/stream`,
+        handlers
+      );
     } catch (error) {
       const errorMessage: ChatMessage = {
         type: "error",

@@ -18,6 +18,13 @@ export interface CustomToolProps {
   onResume: (resumeData: string) => Promise<void>;
 }
 
+export interface MessageHandlers {
+  onMessage?: (content: string) => void | Promise<void>;
+  onToolCall?: (toolName: string, toolArgs: any) => void | Promise<void>;
+  onDone?: () => void | Promise<void>;
+  onError?: (error: string) => void | Promise<void>;
+}
+
 export interface ProcessedResponse<TTool> {
   type: MessageType;
   message?: BaseMessage;
@@ -169,6 +176,66 @@ export class Thread<TTool> {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  async processStream(
+    input: string,
+    url: string,
+    handlers: MessageHandlers,
+    requestBody?: any
+  ): Promise<void> {
+    for await (const event of this.sendMessage(input, url, requestBody)) {
+      switch (event.type) {
+        case "message":
+          if (handlers.onMessage && event.content) {
+            await handlers.onMessage(event.content);
+          }
+          break;
+        case "tool_call":
+          if (handlers.onToolCall && event.toolName && event.toolArgs) {
+            await handlers.onToolCall(event.toolName, event.toolArgs);
+          }
+          break;
+        case "done":
+          if (handlers.onDone) {
+            await handlers.onDone();
+          }
+          break;
+        case "error":
+          if (handlers.onError && event.error) {
+            await handlers.onError(event.error);
+          }
+          break;
+      }
+    }
+  }
+}
+
+export class MessageHandler {
+  private handlers: MessageHandlers = {};
+
+  onMessage(callback: (content: string) => void | Promise<void>): this {
+    this.handlers.onMessage = callback;
+    return this;
+  }
+
+  onToolCall(callback: (toolName: string, toolArgs: any) => void | Promise<void>): this {
+    this.handlers.onToolCall = callback;
+    return this;
+  }
+
+  onDone(callback: () => void | Promise<void>): this {
+    this.handlers.onDone = callback;
+    return this;
+  }
+
+  onError(callback: (error: string) => void | Promise<void>): this {
+    this.handlers.onError = callback;
+    return this;
+  }
+
+  getHandlers(): MessageHandlers {
+    return {...this.handlers};
   }
 }
 
