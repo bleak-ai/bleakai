@@ -182,28 +182,41 @@ export class Conversation<TTool> {
   async processEvents(
     input: string,
     url: string,
-    handlers: EventHandlers,
     requestBody?: any
-  ): Promise<void> {
+  ): Promise<ConversationResponse<TTool>[]> {
+    const responses: ConversationResponse<TTool>[] = [];
+
     for await (const event of this.sendInput(input, url, requestBody)) {
       switch (event.type) {
         case "input":
-          if (handlers.onInput && event.content) {
-            await handlers.onInput(event.content);
+          if (event.content && event.content.trim()) {
+            responses.push({
+              type: "ai",
+              content: event.content
+            });
           }
           break;
         case "tool_call":
-          if (handlers.onToolCall && event.toolName && event.toolArgs) {
-            await handlers.onToolCall(event.toolName, event.toolArgs);
+          if (event.toolName && event.toolArgs) {
+            const tool = this.bleakAI.getTools()[event.toolName];
+            responses.push({
+              type: "tool_call",
+              toolName: event.toolName,
+              args: event.toolArgs,
+              tool
+            });
           }
           break;
         case "error":
-          if (handlers.onError && event.error) {
-            await handlers.onError(event.error);
-          }
+          responses.push({
+            type: "error",
+            error: event.error
+          });
           break;
       }
     }
+
+    return responses;
   }
 }
 

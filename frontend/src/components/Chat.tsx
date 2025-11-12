@@ -2,7 +2,6 @@ import {HumanMessage} from "@langchain/core/messages";
 import {
   BleakAI,
   type ConversationResponse,
-  type EventHandlers,
   type ToolExecutionProps
 } from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
@@ -73,36 +72,6 @@ export default function CustomChat() {
   );
   const conversation = conversationRef.current;
 
-  const getEventHandlers = (
-    processedResponses: ConversationResponse<ToolComponent>[]
-  ): EventHandlers => ({
-    onInput: (content) => {
-      if (content.trim()) {
-        processedResponses.push({
-          type: "ai",
-          content
-        });
-      }
-    },
-    onToolCall: (toolName, toolArgs) => {
-      const ToolComponent = toolComponentMap[toolName];
-      if (ToolComponent) {
-        processedResponses.push({
-          type: "tool_call",
-          toolName,
-          args: toolArgs,
-          tool: ToolComponent
-        });
-      }
-    },
-    onError: (error) => {
-      processedResponses.push({
-        type: "error",
-        error
-      });
-    }
-  });
-
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
@@ -113,16 +82,14 @@ export default function CustomChat() {
 
     setIsLoading(true);
     try {
-      const processedResponses: ConversationResponse<ToolComponent>[] = [];
-      const handlers = getEventHandlers(processedResponses);
-
-      await conversation.processEvents(
+      const responses = await conversation.processEvents(
         userInput,
-        `threads/${conversation.getId()}/stream`,
-        handlers
+        `threads/${conversation.getId()}/stream`
       );
 
-      appendResponse(processedResponses);
+      console.log(responses);
+
+      appendResponse(responses);
     } catch (error) {
       appendResponse({
         type: "error",
@@ -136,17 +103,13 @@ export default function CustomChat() {
   const handleResume = async (resumeData: string) => {
     setIsLoading(true);
     try {
-      const processedResponses: ConversationResponse<ToolComponent>[] = [];
-      const handlers = getEventHandlers(processedResponses);
-
-      await conversation.processEvents(
+      const responses = await conversation.processEvents(
         "", // empty input since we're resuming
         `threads/${conversation.getId()}/resume`,
-        handlers,
         {resume: resumeData}
       );
 
-      appendResponse(processedResponses);
+      appendResponse(responses);
     } catch (error) {
       appendResponse({
         type: "error",
