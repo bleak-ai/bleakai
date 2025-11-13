@@ -2,6 +2,7 @@ import {Route, Routes} from "react-router-dom";
 import "./App.css";
 import {BasicChat} from "./components/BasicChat";
 import Chat from "./components/Chat";
+import ClarifyChat from "./components/ClarifyChat";
 import Header from "./components/Header";
 import Home from "./components/home/Home";
 
@@ -18,6 +19,7 @@ function App() {
             element={<Chat assistantKey="prompt-tester" />}
             /> */}
           <Route path="/prompt-tester" element={<Chat />} />
+          <Route path="/clarify-chat" element={<ClarifyChat />} />
         </Routes>
       </main>
 

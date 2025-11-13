@@ -10,6 +10,24 @@ import {
 import {Menu, X} from "lucide-react";
 import {useState} from "react";
 
+const chatRoutes = [
+  {
+    href: "/chat",
+    title: "Chat",
+    description: "Test bleakai and see what it does!"
+  },
+  {
+    href: "/prompt-tester",
+    title: "Prompt tester",
+    description: "Use the prompt-tester to generate better prompts"
+  },
+  {
+    href: "/clarify-chat",
+    title: "Clarify chat",
+    description: "Use the clarify chat to generate better prompts"
+  }
+];
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -46,26 +64,20 @@ export default function Header() {
               <NavigationMenuTrigger>Features</NavigationMenuTrigger>
               <NavigationMenuContent>
                 <div className="grid gap-3 p-2 w-[400px]">
-                  <NavigationMenuLink
-                    href="/chat"
-                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    <div className="text-sm font-medium leading-none">Chat</div>
-                    <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                      Test bleakai and see what it does!
-                    </p>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink
-                    href="/prompt-tester"
-                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    <div className="text-sm font-medium leading-none">
-                      Prompt tester
-                    </div>
-                    <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                      Use the prompt-tester to generate better prompts
-                    </p>
-                  </NavigationMenuLink>
+                  {chatRoutes.map((route) => (
+                    <NavigationMenuLink
+                      key={route.href}
+                      href={route.href}
+                      className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                    >
+                      <div className="text-sm font-medium leading-none">
+                        {route.title}
+                      </div>
+                      <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                        {route.description}
+                      </p>
+                    </NavigationMenuLink>
+                  ))}
                 </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
@@ -108,18 +120,15 @@ export default function Header() {
                   Features
                 </h4>
                 <div className="mt-2 space-y-1">
-                  <a
-                    href="/chat"
-                    className="block py-2 text-sm hover:text-foreground/80"
-                  >
-                    Chat
-                  </a>
-                  <a
-                    href="/prompt-tester"
-                    className="block py-2 text-sm hover:text-foreground/80"
-                  >
-                    Prompt tester
-                  </a>
+                  {chatRoutes.map((route) => (
+                    <a
+                      key={route.href}
+                      href={route.href}
+                      className="block py-2 text-sm hover:text-foreground/80"
+                    >
+                      {route.title}
+                    </a>
+                  ))}
                 </div>
               </div>
             </div>
