@@ -1,4 +1,5 @@
 import operator
+import os
 from typing import Annotated, List, Literal, TypedDict
 
 from dotenv import load_dotenv
@@ -42,8 +43,9 @@ def ask_questions_tool(questions: List[Question]) -> Command[Literal["answer"]]:
     return answers
 
 
-llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
-# llm = init_chat_model("ollama:llama3.2:latest")
+# llm = init_chat_model("google_genai:gemini-2.5-flash-lite")
+llm_model = os.environ["LLM_MODEL"]
+llm = init_chat_model(llm_model)
 
 
 async def clarify_prompt(
