@@ -1,8 +1,9 @@
 {
   "dockerfile_lines": [],
   "graphs": {
-    "main": "./src/graph.py:graph",
-    "graph2": "./src/graph2.py:graph"
+    "main": "./src/graphs/prompt_graph.py:graph",
+    "basic": "./src/graphs/basic_graph.py:graph",
+    "clarify": "./src/graphs/clarify_graph.py:graph"
   },
   "python_version": "3.12",
   "env": ".env",

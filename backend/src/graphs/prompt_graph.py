@@ -10,12 +10,12 @@ from langchain_core.messages import (
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import START, StateGraph
 from langgraph.types import Command
-from src.prompts import (
+from src.shared.prompts import (
     CLARIFY_PROMPT,
     PROMPT_TEMPLATE,
 )
-from src.state import GraphState
-from src.utils import (
+from src.shared.state import GraphState
+from src.shared.utils import (
     ask_questions_tool,
     create_prompt_tool,
     evaluate_prompt_tool,
