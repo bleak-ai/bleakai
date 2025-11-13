@@ -1,13 +1,10 @@
 """Clarification router for clarify graph endpoints."""
 
-import json
-
 from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
-from langchain_core.load import dumpd
 from langgraph.types import Command
 from pydantic import BaseModel
 from src.graphs.clarify_graph import graph as clarify_graph
+from src.shared.streaming import create_graph_stream
 
 router = APIRouter(prefix="/clarify", tags=["clarification"])
 
@@ -26,33 +23,7 @@ class ResumeInput(BaseModel):
 
 async def run_clarify_graph(graph_input, config, thread_id):
     """Run the clarify graph and return streaming response."""
-
-    async def generate_stream():
-        try:
-            async for update in clarify_graph.astream(
-                graph_input, config, stream_mode=["updates"]
-            ):
-                # Convert update to JSON and send as SSE
-                update_data = dumpd(update)
-                yield f"data: {json.dumps(update_data)}\n\n"
-
-            # Send completion event
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-        except Exception as e:
-            # Send error event
-            error_data = {"type": "error", "error": str(e)}
-            yield f"data: {json.dumps(error_data)}\n\n"
-
-    return StreamingResponse(
-        generate_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Content-Type": "text/event-stream; charset=utf-8",
-        },
-    )
+    return await create_graph_stream(clarify_graph, graph_input, config)
 
 
 @router.post("/threads/{thread_id}/stream")
