@@ -3,10 +3,7 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import (
-    AIMessage,
-    ToolCall,
-)
+from langchain_core.messages import AIMessage, HumanMessage, ToolCall
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import START, StateGraph
 from langgraph.types import Command
@@ -54,7 +51,10 @@ async def generate_or_improve_prompt(
         ai_message = AIMessage(content="", tool_calls=[tool_call])
         return Command(
             goto="tool_supervisor",
-            update={"messages": [ai_message], "prompt": user_message_content},
+            update={
+                "messages": [ai_message],
+                "prompt": HumanMessage(content=user_message_content),
+            },
         )
 
     prompt = PROMPT_TEMPLATE.format(
@@ -73,7 +73,8 @@ async def generate_or_improve_prompt(
     new_prompt = res.tool_calls[0]["args"]["prompt"]
 
     return Command(
-        goto="tool_supervisor", update={"messages": [res], "prompt": new_prompt}
+        goto="tool_supervisor",
+        update={"messages": [res], "prompt": HumanMessage(content=new_prompt)},
     )
 
 
@@ -242,7 +243,7 @@ async def test_prompt(state: GraphState) -> Command[Literal["tool_supervisor"]]:
     """Test the prompt."""
     prompt = state.get("prompt", "")
 
-    result = await llm.ainvoke(prompt)
+    result = await llm.ainvoke(prompt.content)
     # result = "This is a sample tweet"
 
     # Create a fake tool call manually

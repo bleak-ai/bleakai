@@ -4,8 +4,12 @@ from typing import Annotated, List, Literal, TypedDict
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import MessageLikeRepresentation
+from langchain_core.messages import (
+    AIMessage,
+    MessageLikeRepresentation,
+)
 from langchain_core.tools import tool
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
@@ -37,7 +41,7 @@ class GraphState(TypedDict):
 @tool(description="Tool to ask questions to the user.")
 def ask_questions_tool(questions: List[Question]) -> Command[Literal["answer"]]:
     """"""
-
+    print("questions", questions)
     answers = interrupt({"questions": questions})
 
     return answers
@@ -100,7 +104,8 @@ async def tool_supervisor(state: GraphState) -> Command[Literal["answer"]]:
         answers = ask_questions_tool.invoke(tool_args)
 
     return Command(
-        goto="answer", update={"messages": [answers], "questions_made": True}
+        goto="answer",
+        update={"messages": [AIMessage(content=answers)], "questions_made": True},
     )
 
 
@@ -130,4 +135,5 @@ graph_builder.add_node("answer", answer)
 
 graph_builder.add_edge(START, "clarify_prompt")
 
-graph = graph_builder.compile()
+checkpointer = InMemorySaver()
+graph = graph_builder.compile(checkpointer=checkpointer)

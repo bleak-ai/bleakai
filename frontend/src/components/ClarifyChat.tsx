@@ -64,12 +64,40 @@ export default function ClarifyChat({
     }
   };
 
+  const handleResume = async (resumeData: string) => {
+    setIsLoading(true);
+    try {
+      const responses = await conversation.processEvents(
+        `clarify/threads/${conversation.getId()}/resume`,
+        {resume: resumeData}
+      );
+
+      console.log("resume responses", responses);
+
+      setMessages((prev) => [...prev, ...responses]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "error",
+          error: error instanceof Error ? error.message : String(error)
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div
       className={`max-w-4xl mx-auto h-full flex flex-col font-sans bg-white ${className}`}
     >
       <ChatHeader title={title} />
-      <MessageList messages={messages} isLoading={isLoading} />
+      <MessageList
+        messages={messages}
+        isLoading={isLoading}
+        onResume={handleResume}
+      />
       <ChatInput
         inputText={inputText}
         setInputText={setInputText}
@@ -112,8 +140,13 @@ const LoadingIndicator = () => (
   </div>
 );
 
-const MessageBubble = ({message}: {message: ConversationResponse}) => {
-  console.log("message", message);
+const MessageBubble = ({
+  message,
+  onResume
+}: {
+  message: ConversationResponse;
+  onResume?: (resumeData: string) => void;
+}) => {
   if (message.type === "error") {
     return (
       <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
@@ -131,10 +164,7 @@ const MessageBubble = ({message}: {message: ConversationResponse}) => {
     return (
       <div className={`flex items-start max-w-2xl animate-slide-in `}>
         <div className="px-4 py-3 rounded-lg">
-          <ToolComponent
-            args={message.args}
-            onResume={() => console.log("resume")}
-          />
+          <ToolComponent args={message.args} onResume={onResume} />
         </div>
       </div>
     );
@@ -160,10 +190,12 @@ const MessageBubble = ({message}: {message: ConversationResponse}) => {
 
 const MessageList = ({
   messages,
-  isLoading
+  isLoading,
+  onResume
 }: {
   messages: ConversationResponse[];
   isLoading: boolean;
+  onResume?: (resumeData: string) => void;
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -181,7 +213,7 @@ const MessageList = ({
     >
       {!hasMessages && !isLoading && <EmptyState />}
       {messages.map((msg, index) => (
-        <MessageBubble key={index} message={msg} />
+        <MessageBubble key={index} message={msg} onResume={onResume} />
       ))}
       {isLoading && <LoadingIndicator />}
     </div>

@@ -1,7 +1,7 @@
 import operator
 from typing import Annotated, List
 
-from langchain_core.messages import MessageLikeRepresentation
+from langchain_core.messages import HumanMessage, MessageLikeRepresentation
 from pydantic import BaseModel, Field
 
 
@@ -27,7 +27,7 @@ class GraphState(dict):
         default="",
         description="The last result of the prompt.",
     )
-    prompt: str = Field(
+    prompt: HumanMessage = Field(
         default="",
         description="The current prompt.",
     )

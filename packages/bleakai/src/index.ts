@@ -36,32 +36,48 @@ export interface ConversationResponse {
 }
 
 function* parseLangChainEvents(messages: any[]): Generator<ConversationEvent> {
-  for (const item of messages) {
-    if (item.lc === 1 && item.type === "constructor" && item.kwargs) {
-      const kwargs = item.kwargs;
+  console.log("parseLangChainEvents messages", messages);
+  if (!messages || messages.length === 0) {
+    return;
+  }
+  for (const messageGroup of messages) {
+    if (!messageGroup || messageGroup.length === 0) {
+      return;
+    }
+    for (const item of messageGroup) {
+      if (item.kwargs) {
+        const kwargs = item.kwargs;
 
-      // Handle tool calls
-      const toolCalls = kwargs.tool_calls || [];
-      for (const toolCall of toolCalls) {
-        if (toolCall.name && toolCall.args) {
+        // Handle tool calls
+        const toolCalls = kwargs.tool_calls || [];
+        for (const toolCall of toolCalls) {
+          if (toolCall.name && toolCall.args) {
+            console.log("handle tool call", toolCall);
+            yield {
+              type: "tool_call",
+              toolName: toolCall.name,
+              toolArgs: toolCall.args
+            };
+          }
+        }
+
+        // TODO: Not sure when this is being triggered.
+        if (
+          kwargs.content &&
+          typeof kwargs.content === "string" &&
+          kwargs.content.trim()
+        ) {
+          // Is necessary to do something here?. Basically prints the new messages when these are added to the state in graph
+        }
+      } else {
+        // Handle raw message content
+        if (typeof item === "string" && item.trim()) {
+          console.log("handle raw content", item);
           yield {
-            type: "tool_call",
-            toolName: toolCall.name,
-            toolArgs: toolCall.args
+            type: "input",
+            content: item.trim()
           };
         }
-      }
-
-      // Handle regular content
-      if (
-        kwargs.content &&
-        typeof kwargs.content === "string" &&
-        kwargs.content.trim()
-      ) {
-        yield {
-          type: "input",
-          content: kwargs.content.trim()
-        };
       }
     }
   }
@@ -145,7 +161,7 @@ export class Conversation {
                 return;
               } else if (Array.isArray(response)) {
                 const [type, data] = response;
-
+                console.log("SSE response", type, data);
                 switch (type) {
                   case "messages":
                     accumulatedContent = "";
@@ -153,14 +169,17 @@ export class Conversation {
                     break;
                   case "updates":
                     const nodeName = Object.values(data)[0];
-                    const innerMessages =
-                      nodeName &&
-                      typeof nodeName === "object" &&
-                      "messages" in nodeName
-                        ? nodeName.messages
-                        : undefined;
-                    if (innerMessages && Array.isArray(innerMessages)) {
-                      yield* parseLangChainEvents(innerMessages);
+                    console.log("updates nodeName", nodeName);
+                    if (nodeName && typeof nodeName === "object") {
+                      for (const [key, value] of Object.entries(nodeName)) {
+                        console.log(
+                          `Processing update property: ${key}`,
+                          value
+                        );
+                        yield* parseLangChainEvents([value]);
+                      }
+                    } else {
+                      console.warn("Invalid node data in updates:", nodeName);
                     }
                     break;
                 }
@@ -250,7 +269,7 @@ export class BleakAI {
 
   constructor(config: BleakAIConfig = {}) {
     this.tools = config.tools || {};
-    this.apiUrl = config.apiUrl || "http://localhost:8000";
+    this.apiUrl = config.apiUrl || "";
   }
 
   getApiUrl(): string {
