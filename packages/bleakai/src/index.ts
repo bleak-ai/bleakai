@@ -1,12 +1,10 @@
-import {BaseMessage, type MessageType} from "@langchain/core/messages";
 
 export interface BleakEvent {
-  // Added "output" for AI text responses and "interrupt" for human-in-the-loop stops
+  // Wire protocol events from streaming API
   type: "input" | "tool_call" | "error" | "output" | "interrupt";
   content?: string;
   toolName?: string;
   toolArgs?: any;
-  tool?: any;
   error?: string;
   // Optional: helpful for debugging origin
   id?: string;
@@ -28,14 +26,24 @@ export interface EventHandlers {
   onError?: (error: string) => void | Promise<void>;
 }
 
-export interface BleakResponse {
-  type: MessageType;
-  message?: BaseMessage;
-  toolName?: string;
-  args?: Record<string, any>;
-  content?: string | any;
-  tool?: any;
-  error?: unknown;
+export type BleakMessage =
+  | { type: "text"; role: "user" | "ai"; content: string }
+  | { type: "tool"; toolName: string; args: any; toolComponent: any; id: string }
+  | { type: "error"; message: string }
+  | { type: "interrupt"; content: string };
+
+/**
+ * Helper function to create a user message for the UI.
+ *
+ * @param content - The text content of the user message
+ * @returns A BleakMessage representing user input
+ */
+export function createUserMessage(content: string): BleakMessage {
+  return {
+    type: "text",
+    role: "user",
+    content
+  };
 }
 
 function* extractLangChainEventsFromMessage(
@@ -312,67 +320,71 @@ export class BleakConversation {
   }
 
   /**
-   * Processes conversation events and returns them as an array.
-   * Collects all events from the stream and converts them to BleakResponse format.
-   * This method is kept for backward compatibility.
+   * Processes conversation events and returns them as UI messages.
+   * Collects all events from the stream and converts them to BleakMessage format.
    *
    * @param url - API endpoint to call
    * @param body - Request payload
-   * @returns Promise resolving to array of BleakResponse objects
+   * @returns Promise resolving to array of BleakMessage objects for UI consumption
    */
   async processEvents(
     url: string,
     body: Record<string, unknown>
-  ): Promise<BleakResponse[]> {
-    const responses: BleakResponse[] = [];
+  ): Promise<BleakMessage[]> {
+    const messages: BleakMessage[] = [];
 
     for await (const event of this.streamConversationEvents(url, body)) {
       switch (event.type) {
         case "input":
           if (event.content && event.content.trim()) {
-            responses.push({
-              type: "ai",
+            messages.push({
+              type: "text",
+              role: "ai",
               content: event.content
             });
           }
           break;
         case "output":
           if (event.content && event.content.trim()) {
-            responses.push({
-              type: "ai",
+            messages.push({
+              type: "text",
+              role: "ai",
               content: event.content
             });
           }
           break;
         case "interrupt":
           if (event.content && event.content.trim()) {
-            responses.push({
-              type: "ai",
+            messages.push({
+              type: "interrupt",
               content: event.content
             });
           }
           break;
         case "tool_call":
           if (event.toolName && event.toolArgs) {
-            const tool = this.bleakAI.getTools()[event.toolName];
-            responses.push({
-              type: "tool_call",
+            const toolComponent = this.bleakAI.getTools()[event.toolName];
+            messages.push({
+              type: "tool",
               toolName: event.toolName,
               args: event.toolArgs,
-              tool
+              toolComponent,
+              id: event.id || ""
             });
           }
           break;
         case "error":
-          responses.push({
-            type: "error",
-            error: event.error
-          });
+          if (event.error) {
+            messages.push({
+              type: "error",
+              message: event.error
+            });
+          }
           break;
       }
     }
 
-    return responses;
+    return messages;
   }
 }
 

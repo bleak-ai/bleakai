@@ -1,8 +1,8 @@
-import {HumanMessage} from "@langchain/core/messages";
 import {
   BleakAI,
-  type BleakResponse,
-  type ToolExecutionProps
+  type BleakMessage,
+  type ToolExecutionProps,
+  createUserMessage
 } from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
 import React from "react";
@@ -29,7 +29,7 @@ type ToolComponent = ComponentType<ToolExecutionProps>;
 
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
-  const [messages, setMessages] = React.useState<BleakResponse[]>([]);
+  const [messages, setMessages] = React.useState<BleakMessage[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -64,7 +64,7 @@ export default function CustomChat() {
     if (!inputText.trim() || isLoading) return;
 
     const userInput = inputText;
-    const userMessage = new HumanMessage(userInput);
+    const userMessage = createUserMessage(userInput);
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
 
@@ -81,7 +81,7 @@ export default function CustomChat() {
         ...prev,
         {
           type: "error",
-          error: error instanceof Error ? error.message : String(error)
+          message: error instanceof Error ? error.message : String(error)
         }
       ]);
     } finally {
@@ -103,7 +103,7 @@ export default function CustomChat() {
         ...prev,
         {
           type: "error",
-          error: error instanceof Error ? error.message : String(error)
+          message: error instanceof Error ? error.message : String(error)
         }
       ]);
     } finally {
@@ -132,10 +132,10 @@ export default function CustomChat() {
       >
         {!hasMessages && !isLoading && <EmptyState />}
 
-        {messages.map((response, index) => {
-          if (response.type === "human" || response.type === "ai") {
-            // Determine if user or AI based on message type
-            const isUserMessage = response.type === "human";
+        {messages.map((message, index) => {
+          if (message.type === "text") {
+            // Determine if user or AI based on message role
+            const isUserMessage = message.role === "user";
 
             return (
               <div
@@ -153,7 +153,7 @@ export default function CustomChat() {
                 >
                   <div className="flex-1 leading-relaxed break-words">
                     <pre className="font-mono text-sm whitespace-pre-wrap">
-                      {response.content}
+                      {message.content}
                     </pre>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export default function CustomChat() {
             );
           }
 
-          if (response.type === "error") {
+          if (message.type === "error") {
             return (
               <div
                 key={index}
@@ -174,7 +174,7 @@ export default function CustomChat() {
                         Error
                       </div>
                       <div className="text-gray-600 text-sm">
-                        {response.error?.toString() || "Unknown error occurred"}
+                        {message.message || "Unknown error occurred"}
                       </div>
                     </div>
                     <Button
@@ -189,34 +189,46 @@ export default function CustomChat() {
             );
           }
 
-          if (response.type === "other") {
-            return null;
-          }
-
-          if (response.type !== "tool_call") {
+          if (message.type === "interrupt") {
             return (
               <div
                 key={index}
-                className="flex items-start max-w-2xl self-center animate-slide-in"
+                className="flex items-start max-w-2xl w-full self-start animate-slide-in"
               >
-                <div className="px-4 py-3 rounded-lg bg-gray-100 text-gray-600 text-sm">
-                  Unknown response type: {response.type}
+                <div className="px-4 py-3 rounded-lg bg-yellow-50 border border-yellow-200 flex-1">
+                  <div className="font-semibold text-yellow-900 mb-1 text-sm">
+                    Interrupt
+                  </div>
+                  <div className="text-yellow-700 text-sm whitespace-pre-wrap">
+                    {message.content}
+                  </div>
                 </div>
               </div>
             );
           }
 
-          const ToolComponent = response.tool;
+          if (message.type === "tool") {
+            const ToolComponent = message.toolComponent;
 
-          if (!ToolComponent) {
+            if (!ToolComponent) {
+              return (
+                <div
+                  key={index}
+                  className="flex items-start max-w-2xl self-start animate-slide-in"
+                >
+                  <div className="px-4 py-3 rounded-lg bg-white border border-gray-300 text-gray-600 text-sm">
+                    Tool component not found: {message.toolName}
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={index}
-                className="flex items-start max-w-2xl self-start animate-slide-in"
+                className="self-start w-full animate-slide-in mb-4"
               >
-                <div className="px-4 py-3 rounded-lg bg-white border border-gray-300 text-gray-600 text-sm">
-                  Tool component not found: {response.toolName}
-                </div>
+                <ToolComponent args={message.args} onResume={handleResume} />
               </div>
             );
           }
@@ -224,9 +236,11 @@ export default function CustomChat() {
           return (
             <div
               key={index}
-              className="self-start w-full animate-slide-in mb-4"
+              className="flex items-start max-w-2xl self-center animate-slide-in"
             >
-              <ToolComponent args={response.args} onResume={handleResume} />
+              <div className="px-4 py-3 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                Unknown message type
+              </div>
             </div>
           );
         })}

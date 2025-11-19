@@ -1,6 +1,6 @@
 "use client";
 
-import {BleakAI} from "bleakai";
+import {BleakAI, type BleakMessage, createUserMessage} from "bleakai";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 //==============================================================================
@@ -14,12 +14,6 @@ export interface BasicChatProps {
   placeholder?: string;
   /** Optional className for additional styling */
   className?: string;
-}
-
-interface ChatMessage {
-  type: "human" | "ai" | "error";
-  content: string;
-  error?: string;
 }
 
 //==============================================================================
@@ -56,7 +50,7 @@ export function BasicChat({
 //==============================================================================
 
 function useChatHandler() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<BleakMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -79,7 +73,7 @@ function useChatHandler() {
   const handleSendMessage = useCallback(async () => {
     if (!inputText.trim() || isLoading) return;
 
-    const userMessage: ChatMessage = {type: "human", content: inputText};
+    const userMessage = createUserMessage(inputText);
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
@@ -90,19 +84,13 @@ function useChatHandler() {
         {input: inputText}
       );
 
-      const aiMessages: ChatMessage[] = responses.map((response) => ({
-        type: "ai",
-        content: response.content
-      }));
+      console.log("responses", responses);
 
-      console.log("aiMessages", aiMessages);
-
-      setMessages((prev) => [...prev, ...aiMessages]);
+      setMessages((prev) => [...prev, ...responses]);
     } catch (error) {
-      const errorMessage: ChatMessage = {
+      const errorMessage: BleakMessage = {
         type: "error",
-        content: "",
-        error: error instanceof Error ? error.message : String(error)
+        message: error instanceof Error ? error.message : String(error)
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -154,19 +142,43 @@ const LoadingIndicator = () => (
   </div>
 );
 
-const MessageBubble = ({message}: {message: ChatMessage}) => {
+const MessageBubble = ({message}: {message: BleakMessage}) => {
   if (message.type === "error") {
     return (
       <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
         <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 flex-1">
           <p className="font-semibold text-red-900 mb-1 text-sm">Error</p>
-          <p className="text-red-700 text-sm">{message.error}</p>
+          <p className="text-red-700 text-sm">{message.message}</p>
         </div>
       </div>
     );
   }
 
-  const isUser = message.type === "human";
+  if (message.type === "tool") {
+    return (
+      <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
+        <div className="px-4 py-3 rounded-lg bg-purple-50 border border-purple-200 flex-1">
+          <p className="font-semibold text-purple-900 mb-1 text-sm">Tool Call</p>
+          <p className="text-purple-700 text-sm">Tool: {message.toolName}</p>
+          <pre className="text-purple-600 text-xs mt-1">{JSON.stringify(message.args, null, 2)}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === "interrupt") {
+    return (
+      <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
+        <div className="px-4 py-3 rounded-lg bg-yellow-50 border border-yellow-200 flex-1">
+          <p className="font-semibold text-yellow-900 mb-1 text-sm">Interrupt</p>
+          <p className="text-yellow-700 text-sm whitespace-pre-wrap">{message.content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // text message
+  const isUser = message.role === "user";
   const bubbleClasses = isUser
     ? "self-end bg-blue-600 text-white rounded-br-none"
     : "self-start bg-gray-100 text-gray-900 rounded-bl-none";
@@ -188,7 +200,7 @@ const MessageList = ({
   messages,
   isLoading
 }: {
-  messages: ChatMessage[];
+  messages: BleakMessage[];
   isLoading: boolean;
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);

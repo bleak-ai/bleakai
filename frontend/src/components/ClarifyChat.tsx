@@ -1,5 +1,4 @@
-import {HumanMessage} from "@langchain/core/messages";
-import {BleakAI, type BleakResponse, type ToolExecutionProps} from "bleakai";
+import {BleakAI, type BleakMessage, type ToolExecutionProps, createUserMessage} from "bleakai";
 import {useEffect, useMemo, useRef, useState, type ComponentType} from "react";
 import {AskQuestionTool} from "./tools/AskQuestionTool";
 
@@ -14,7 +13,7 @@ export default function ClarifyChat({
   placeholder = "Type your message...",
   className = ""
 }) {
-  const [messages, setMessages] = useState<BleakResponse[]>([]);
+  const [messages, setMessages] = useState<BleakMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,7 +35,7 @@ export default function ClarifyChat({
     if (!inputText.trim() || isLoading) return;
 
     // Before Starting request
-    const userMessage = new HumanMessage(inputText);
+    const userMessage = createUserMessage(inputText);
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
@@ -53,7 +52,7 @@ export default function ClarifyChat({
         ...prev,
         {
           type: "error",
-          error: error
+          message: error instanceof Error ? error.message : String(error)
         }
       ]);
       setIsLoading(false);
@@ -76,7 +75,7 @@ export default function ClarifyChat({
         ...prev,
         {
           type: "error",
-          error: error instanceof Error ? error.message : String(error)
+          message: error instanceof Error ? error.message : String(error)
         }
       ]);
     } finally {
@@ -140,23 +139,24 @@ const MessageBubble = ({
   message,
   onResume
 }: {
-  message: BleakResponse;
+  message: BleakMessage;
   onResume?: (resumeData: string) => void;
 }) => {
   console.log("message", message);
+
   if (message.type === "error") {
     return (
       <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
         <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 flex-1">
           <p className="font-semibold text-red-900 mb-1 text-sm">Error</p>
-          <p className="text-red-700 text-sm">{message.error?.toString()}</p>
+          <p className="text-red-700 text-sm">{message.message}</p>
         </div>
       </div>
     );
   }
 
-  if (message.type === "tool_call") {
-    const ToolComponent = message.tool;
+  if (message.type === "tool") {
+    const ToolComponent = message.toolComponent;
 
     return (
       <div className={`flex items-start max-w-2xl animate-slide-in `}>
@@ -167,7 +167,19 @@ const MessageBubble = ({
     );
   }
 
-  const isUser = message.type === "human";
+  if (message.type === "interrupt") {
+    return (
+      <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
+        <div className="px-4 py-3 rounded-lg bg-yellow-50 border border-yellow-200 flex-1">
+          <p className="font-semibold text-yellow-900 mb-1 text-sm">Interrupt</p>
+          <p className="text-yellow-700 text-sm whitespace-pre-wrap">{message.content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // text message
+  const isUser = message.role === "user";
   const bubbleClasses = isUser
     ? "self-end bg-blue-600 text-white rounded-br-none"
     : "self-start bg-gray-100 text-gray-900 rounded-bl-none";
@@ -190,7 +202,7 @@ const MessageList = ({
   isLoading,
   onResume
 }: {
-  messages: BleakResponse[];
+  messages: BleakMessage[];
   isLoading: boolean;
   onResume?: (resumeData: string) => void;
 }) => {
