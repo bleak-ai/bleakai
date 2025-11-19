@@ -40,10 +40,10 @@ Here's a simplified example of how to integrate BleakAI into a React component:
 ```tsx
 import React, { useState, useRef } from 'react';
 import { HumanMessage } from '@langchain/core/messages';
-import { BleakAI, type ConversationResponse } from 'bleakai';
+import { BleakAI, type BleakResponse } from 'bleakai';
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<ConversationResponse[]>([]);
+  const [messages, setMessages] = useState<BleakResponse[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -186,22 +186,22 @@ const bleakAI = new BleakAI(config: BleakAIConfig)
 
 #### Methods
 
-- `createConversation(conversationId: string): Conversation` - Creates a new conversation
+- `createConversation(conversationId: string): BleakConversation` - Creates a new conversation
 - `getApiUrl(): string` - Returns the configured API URL
 - `getTools(): Record<string, any>` - Returns the registered tools
 
-### Conversation Class
+### BleakConversation Class
 
 #### Methods
 
 - `getId(): string` - Returns the conversation ID
-- `processEvents(url: string, body: Record<string, unknown>): Promise<ConversationResponse[]>` - Sends input and processes responses
-- `sendInput(url: string, body: Record<string, unknown>): AsyncGenerator<ConversationEvent>` - Streams responses in real-time
+- `processEvents(url: string, body: Record<string, unknown>): Promise<BleakResponse[]>` - Sends input and processes responses
+- `sendInput(url: string, body: Record<string, unknown>): AsyncGenerator<BleakEvent>` - Streams responses in real-time
 
 ### Types
 
 ```typescript
-interface ConversationResponse {
+interface BleakResponse {
   type: 'human' | 'ai' | 'tool_call' | 'error';
   content?: string;
   toolName?: string;

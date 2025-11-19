@@ -1,7 +1,7 @@
 import {HumanMessage} from "@langchain/core/messages";
 import {
   BleakAI,
-  type ConversationResponse,
+  type BleakResponse,
   type ToolExecutionProps
 } from "bleakai";
 import type {ComponentType} from "react"; // <-- Import React-specific types here
@@ -29,7 +29,7 @@ type ToolComponent = ComponentType<ToolExecutionProps>;
 
 export default function CustomChat() {
   const [inputText, setInputText] = React.useState("");
-  const [messages, setMessages] = React.useState<ConversationResponse[]>([]);
+  const [messages, setMessages] = React.useState<BleakResponse[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 

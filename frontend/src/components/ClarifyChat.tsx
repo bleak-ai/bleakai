@@ -1,9 +1,5 @@
 import {HumanMessage} from "@langchain/core/messages";
-import {
-  BleakAI,
-  type ConversationResponse,
-  type ToolExecutionProps
-} from "bleakai";
+import {BleakAI, type BleakResponse, type ToolExecutionProps} from "bleakai";
 import {useEffect, useMemo, useRef, useState, type ComponentType} from "react";
 import {AskQuestionTool} from "./tools/AskQuestionTool";
 
@@ -18,7 +14,7 @@ export default function ClarifyChat({
   placeholder = "Type your message...",
   className = ""
 }) {
-  const [messages, setMessages] = useState<ConversationResponse[]>([]);
+  const [messages, setMessages] = useState<BleakResponse[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -144,9 +140,10 @@ const MessageBubble = ({
   message,
   onResume
 }: {
-  message: ConversationResponse;
+  message: BleakResponse;
   onResume?: (resumeData: string) => void;
 }) => {
+  console.log("message", message);
   if (message.type === "error") {
     return (
       <div className="flex items-start max-w-2xl w-full self-start animate-slide-in">
@@ -193,7 +190,7 @@ const MessageList = ({
   isLoading,
   onResume
 }: {
-  messages: ConversationResponse[];
+  messages: BleakResponse[];
   isLoading: boolean;
   onResume?: (resumeData: string) => void;
 }) => {
